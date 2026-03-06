@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" type="image/png" href="Paytrack-icon.png">
+    <title>PayTrack - Secure Access</title>
+    <!-- Fonts & Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="lock.css">
+</head>
+<body>
+
+    <!-- Animated Background -->
+    <div class="background-animation">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Main Glass Card -->
+    <div class="lock-card">
+        
+        <!-- Header Section (Aligned Top Left) -->
+        <div class="lock-header">
+            <div class="logo-container">
+                <img id="lockScreenLogo" src="Paytrack-icon.png" alt="Logo" class="app-logo">
+            </div>
+            <h1 class="app-name">PayTrack</h1>
+        </div>
+
+        <!-- Dynamic Content Section -->
+        <div class="lock-body">
+            <div class="text-group">
+                <h2 id="pinTitle" class="status-title">Welcome</h2>
+                <p id="pinSubtitle" class="status-subtitle">Enter PIN to access</p>
+            </div>
+            
+            <input type="password" id="pinInput" maxlength="4" inputmode="numeric" autocomplete="off">
+
+            <!-- Visual PIN Dots (Stars) -->
+            <div class="pin-dots-container" id="pinDisplayArea">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+
+            <div id="feedbackMessage" class="feedback-badge hidden">Incorrect PIN</div>
+        </div>
+
+        <!-- Keypad Section -->
+        <div class="keypad" id="keypad">
+            <button class="key" data-value="1">1</button>
+            <button class="key" data-value="2">2</button>
+            <button class="key" data-value="3">3</button>
+            <button class="key" data-value="4">4</button>
+            <button class="key" data-value="5">5</button>
+            <button class="key" data-value="6">6</button>
+            <button class="key" data-value="7">7</button>
+            <button class="key" data-value="8">8</button>
+            <button class="key" data-value="9">9</button>
+            <div class="key-spacer"></div>
+            <button class="key" data-value="0">0</button>
+            <button class="key key-action" id="deleteKey">
+                <i class="fas fa-backspace"></i>
+            </button>
+        </div>
+
+        <!-- New Biometric Button (Hidden by default) -->
+        <div id="biometricContainer" class="biometric-container hidden">
+            <button id="biometricBtn" class="biometric-btn" title="Login with Fingerprint">
+                <i class="fas fa-fingerprint"></i>
+            </button>
+            <p class="biometric-label">Touch to unlock</p>
+        </div>
+
+        <div class="lock-footer">
+            <p>Secured by PayTrack</p>
+        </div>
+    </div>
+
+    <script src="translations.js"></script>
+    <script src="lock.js"></script>
+</body>
+</html>

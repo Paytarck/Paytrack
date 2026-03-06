@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pay-Track</title>
+    <link rel="icon" type="image/png" href="Paytrack-icon.png">
+    <!-- Font Awesome for Background Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <!-- Modern Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="splash.css">
+</head>
+<body>
+
+    <!-- Ambient Background Elements -->
+    <div id="ambient-bg">
+        <!-- Original Glows -->
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+
+        <!-- New Background Icons -->
+        <i class="fas fa-lock bg-icon icon-lock"></i>
+        <i class="fas fa-dollar-sign bg-icon icon-dollar"></i>
+        <i class="fas fa-coins bg-icon icon-coins"></i>
+        <i class="fas fa-crown bg-icon icon-crown"></i>
+        <i class="fas fa-shield-alt bg-icon icon-shield"></i>
+        <i class="fas fa-wallet bg-icon icon-wallet"></i>
+    </div>
+
+    <!-- Main Content -->
+    <div class="splash-content">
+        
+        <!-- The Beautiful Loader & Logo -->
+        <div class="loader-wrapper">
+            <div class="loader-ring"></div>
+            <div class="logo-container">
+                <!-- Using onerror to handle missing images gracefully -->
+                <img src="Paytrack-icon.png" alt="Pay-Track" class="splash-logo" onerror="this.src='splsh app image.jpeg'">
+            </div>
+        </div>
+
+        <!-- Text -->
+        <div class="text-container">
+            <h1 class="app-title">Pay-Track</h1>
+            <p class="app-subtitle">Secure Financial Management</p>
+        </div>
+
+    </div>
+
+    <!-- Minimal Footer (Hidden via CSS) -->
+    <div class="footer-credit">
+        <span class="footer-text">Loading Assets</span>
+        <div class="footer-dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+
+    <script>
+        // Redirect after animation completes (approx 4 seconds)
+        setTimeout(() => {
+            window.location.replace('lock.html');
+        }, 5000);
+    </script>
+</body>
+</html>

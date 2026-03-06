@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - PayTrack</title>
+    <link rel="icon" type="image/png" href="Paytrack-icon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body class="p-4 bg-gray-900 min-h-screen flex items-center justify-center font-[Inter]">
+
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-green-500 to-teal-600"></div>
+
+        <div class="text-center mb-8 mt-2">
+            <h1 class="text-3xl font-bold text-gray-800">Welcome Back</h1>
+            <p class="text-gray-500 mt-1">Login to sync your data</p>
+        </div>
+
+        <div id="successMsg" class="hidden bg-green-100 border-l-4 border-green-500 text-green-700 p-3 rounded mb-6 text-sm">
+            <p class="font-bold">Account Created!</p>
+            <p>Please login with your new credentials.</p>
+        </div>
+
+        <form id="loginForm" class="space-y-5">
+            <!-- Username & PIN Inputs (Same as before) -->
+            <div>
+                <label class="block text-gray-700 text-sm font-semibold mb-2">Username</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fas fa-user"></i></span>
+                    <input type="text" id="loginUsername" class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your username">
+                </div>
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-semibold mb-2">PIN</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fas fa-lock"></i></span>
+                    <input type="password" id="loginPin" maxlength="4" inputmode="numeric" class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 text-center text-xl tracking-widest font-mono" placeholder="••••">
+                </div>
+            </div>
+
+            <button type="submit" id="loginBtn" class="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transform transition active:scale-95 flex justify-center items-center">
+                <span id="loginBtnText">Login & Sync</span>
+                <i id="loginSpinner" class="fas fa-spinner fa-spin hidden"></i>
+            </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="relative flex py-5 items-center">
+            <div class="flex-grow border-t border-gray-300"></div>
+            <span class="flex-shrink-0 mx-4 text-gray-400 text-sm">Or</span>
+            <div class="flex-grow border-t border-gray-300"></div>
+        </div>
+
+        <!-- Google Login Button -->
+        <button id="googleLoginBtn" class="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 rounded-lg shadow-sm flex items-center justify-center gap-3 transition-colors">
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google">
+            <span>Sign in with Google</span>
+        </button>
+        
+        <div id="loginError" class="hidden mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm border border-red-200 flex items-start">
+            <i class="fas fa-times-circle mt-1 mr-2"></i>
+            <span id="loginErrorText"></span>
+        </div>
+
+        <div class="text-center mt-6 pt-4 border-t border-gray-100">
+            <a href="register.html" class="text-green-600 font-semibold hover:underline text-sm">Create an account</a>
+            <br>
+            <a href="dashboard.html" class="text-gray-400 text-xs hover:text-gray-600 mt-4 inline-block">Continue Offline</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { loginUser, handleGoogleAuth } from './auth.js';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.get('registered') === 'true') {
+            document.getElementById('successMsg').classList.remove('hidden');
+        }
+
+        const form = document.getElementById('loginForm');
+        const googleBtn = document.getElementById('googleLoginBtn');
+        const errorBox = document.getElementById('loginError');
+        const errorText = document.getElementById('loginErrorText');
+        const btnText = document.getElementById('loginBtnText');
+        const spinner = document.getElementById('loginSpinner');
+        const btn = document.getElementById('loginBtn');
+
+        // MANUAL LOGIN
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.classList.add('hidden');
+            btnText.classList.add('hidden');
+            spinner.classList.remove('hidden');
+            btn.disabled = true;
+
+            const username = document.getElementById('loginUsername').value.trim();
+            const pin = document.getElementById('loginPin').value;
+
+            try {
+                if(!username || pin.length !== 4) throw new Error("Check username and PIN.");
+                await loginUser(username, pin);
+                window.location.href = 'dashboard.html';
+            } catch (err) {
+                errorText.textContent = err.message;
+                errorBox.classList.remove('hidden');
+                btnText.classList.remove('hidden');
+                spinner.classList.add('hidden');
+                btn.disabled = false;
+            }
+        });
+
+        // GOOGLE LOGIN
+        googleBtn.addEventListener('click', async () => {
+            errorBox.classList.add('hidden');
+            googleBtn.disabled = true;
+            googleBtn.classList.add('opacity-50');
+
+            try {
+                // If account exists -> Logs in.
+                // If account doesn't exist -> REGISTERS automatically.
+                await handleGoogleAuth();
+                window.location.href = 'dashboard.html';
+            } catch (err) {
+                console.error(err);
+                errorText.textContent = "Google Sign-In failed.";
+                errorBox.classList.remove('hidden');
+                googleBtn.disabled = false;
+                googleBtn.classList.remove('opacity-50');
+            }
+        });
+    </script>
+</body>
+</html>

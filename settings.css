@@ -1,0 +1,210 @@
+/* --- CRITICAL LAYOUT & SCROLLING FIXES --- */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    /* Force dynamic height to allow content to grow */
+    height: auto !important; 
+    min-height: 100vh;
+    /* Force vertical scrolling */
+    overflow-y: auto !important; 
+    overflow-x: hidden; /* Prevent horizontal scrollbars */
+    /* Ensure background gradient covers the whole scrollable area */
+    background-attachment: fixed;
+    /* Reset font for consistency */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Add padding to the bottom of the main container so content isn't cut off */
+.container {
+    padding-bottom: 80px; 
+}
+
+/* --- LOGO COLOR LOGIC START --- */
+.header-icon {
+    /* Default to White for gradients */
+    filter: brightness(0) invert(1);
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+/* Restore Original Colors for Light Theme */
+body.theme-light .header-icon {
+    filter: none;
+}
+
+/* Custom Theme Support */
+body.theme-custom .header-icon {
+    filter: var(--custom-icon-filter, brightness(0) invert(1));
+}
+/* --- LOGO COLOR LOGIC END --- */
+
+/* --- BUTTON STYLES --- */
+
+/* Glassy Back Button */
+.back-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Settings Button (if used elsewhere) */
+.settings-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.settings-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* --- THEME SELECTOR STYLES --- */
+
+.theme-option, .saved-theme-button {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid transparent; /* Prepare for selection border */
+}
+
+.theme-option:hover, .saved-theme-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15);
+}
+
+/* Active/Selected State */
+.theme-option.selected, .saved-theme-button.selected {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #3b82f6; /* Focus ring effect */
+    z-index: 10;
+}
+
+/* Delete Button on Saved Themes */
+.delete-theme-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    z-index: 20;
+}
+
+.saved-theme-button:hover .delete-theme-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.delete-theme-btn:hover {
+    background-color: #ef4444; /* Red on hover */
+}
+
+/* --- INPUT & TOGGLE ANIMATIONS --- */
+
+.custom-color-container {
+    transition: all 0.3s ease;
+    border: 1px solid #d1d5db;
+}
+
+body.theme-dark .custom-color-container {
+    border-color: #4b5563;
+}
+
+.custom-color-container input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.color-preview {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    border: 2px solid #e5e7eb;
+    background-color: #f3f4f6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Collapsible Sections (Gradient & Reminder Options) */
+.gradient-options, .reminder-options {
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+}
+
+.gradient-options.show, .reminder-options.show {
+    max-height: 300px; /* Large enough to fit content */
+    opacity: 1;
+    margin-top: 1rem;
+}
+
+/* --- NOTIFICATION TOAST --- */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999; /* Ensure it's above everything */
+    padding: 12px 24px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    transform: translateX(400px); /* Hidden off-screen right */
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 90%;
+}
+
+.notification.show {
+    transform: translateX(0); /* Slide in */
+}
+
+.notification.success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-left: 4px solid #a7f3d0;
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-left: 4px solid #fecaca;
+}
+
+/* --- DARK MODE UTILITIES --- */
+/* These ensure legibility if a dark theme is active */
+body.theme-dark .text-gray-800, 
+body.theme-dark .text-gray-700 { color: #e5e7eb; }
+body.theme-dark .text-gray-600 { color: #9ca3af; }
+body.theme-dark .glass-effect {
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(55, 65, 81, 0.5);
+}
+body.theme-dark input, 
+body.theme-dark select {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
+}
