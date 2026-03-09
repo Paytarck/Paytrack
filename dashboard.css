@@ -1,0 +1,333 @@
+:root {
+  /* A fresh gradient */
+  --bg-gradient-start: #764ba2;
+  --bg-gradient-end: #667eea;
+  --header-text: white;
+  --header-subtext: rgba(255, 255, 255, 0.8);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+  transition: background 0.5s ease;
+  min-height: 100vh;
+}
+
+/* --- LOGO FIX START --- */
+.header-icon { 
+    border-radius: 50%;        /* Force Circle Shape */
+    background-color: white;   /* White background for visibility */
+    padding: 4px;              /* Space inside the circle */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Nice shadow depth */
+    object-fit: contain;       /* Ensure image fits inside */
+    
+    /* Ensure colors are original (No white silhouette) */
+    filter: none !important; 
+    
+    transition: transform 0.3s ease;
+    cursor: pointer;
+}
+
+.header-icon.logo-enlarged {
+    transform: scale(1.8);
+    z-index: 50; /* Ensure it pops over other elements */
+}
+
+/* Light Theme: Remove the badge look if you prefer it blending in */
+body.theme-light .header-icon {
+    background-color: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+/* --- LOGO FIX END --- */
+
+/* --- THEME OVERRIDE STYLES START --- */
+body.theme-green {
+  --bg-gradient-start: #34d399;
+  --bg-gradient-end: #10b981;
+  --header-text: white;
+  --header-subtext: rgba(255, 255, 255, 0.9);
+}
+body.theme-green .settings-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+body.theme-green .settings-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+body.theme-light {
+    --bg-gradient-start: #f9fafb;
+    --bg-gradient-end: #e5e7eb;
+    --header-text: #1f2937;
+    --header-subtext: #4b5563;
+}
+body.theme-light .settings-button {
+    background: rgba(0, 0, 0, 0.05);
+    color: #374151;
+}
+body.theme-light .settings-button:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+body.theme-light .text-gray-800 { color: #1f2937; }
+body.theme-light .text-gray-600 { color: #4b5563; }
+body.theme-light .text-gray-500 { color: #6b7280; }
+body.theme-light input, body.theme-light select {
+    background-color: white;
+    border-color: #d1d5db;
+    color: #1f2937;
+}
+
+body.theme-dark {
+  --bg-gradient-start: #1f2937;
+  --bg-gradient-end: #111827;
+  --header-text: #e5e7eb;
+  --header-subtext: #9ca3af;
+}
+body.theme-dark .settings-button {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+body.theme-dark .settings-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+body.theme-dark .glass-effect {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(55, 65, 81, 0.5);
+}
+body.theme-dark .bg-white {
+    background-color: #374151;
+}
+body.theme-dark .text-gray-800 { color: #e5e7eb; }
+body.theme-dark .text-gray-600 { color: #9ca3af; }
+body.theme-dark .text-gray-500 { color: #6b7280; }
+body.theme-dark .border-gray-300 { border-color: #4b5563; }
+body.theme-dark input, body.theme-dark select {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
+}
+body.theme-dark input::placeholder { color: #9ca3af; }
+body.theme-dark #noProjects img { filter: invert(0.9); }
+body.theme-dark .reminder-glow {
+    box-shadow: 0 0 15px rgba(250, 204, 21, 0.4);
+}
+
+body.theme-custom {
+    --bg-gradient-start: var(--custom-color-start, #764ba2);
+    --bg-gradient-end: var(--custom-color-end, #667eea);
+    --header-text: var(--custom-header-text, white);
+    --header-subtext: var(--custom-header-subtext, rgba(255, 255, 255, 0.8));
+    background: var(--custom-background, linear-gradient(135deg, var(--custom-color-start), var(--custom-color-end)));
+}
+body.theme-custom .settings-button {
+    background: var(--custom-button-bg, rgba(255, 255, 255, 0.2));
+    color: var(--custom-header-text, white);
+}
+body.theme-custom .settings-button:hover {
+    background: var(--custom-button-hover-bg, rgba(255, 255, 255, 0.3));
+}
+/* --- THEME OVERRIDE STYLES END --- */
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.header-main-text { color: var(--header-text); }
+.header-sub-text { color: var(--header-subtext); }
+
+.mobile-logo {
+    display: none;
+}
+
+/* General Glass Effect */
+.glass-effect {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.project-card {
+  padding: 1.25rem;
+  border-radius: 1rem;
+  transition: all 0.3s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  transition: all 0.3s ease;
+}
+    
+.btn-secondary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+}
+
+.nav-button {
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.nav-button:hover {
+    transform: translateY(-1px);
+}
+
+.settings-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.settings-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1050;
+  padding: 12px 20px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  transform: translateX(400px);
+  transition: transform 0.3s ease;
+}
+
+.notification.show {
+  transform: translateX(0);
+}
+
+.notification.success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.notification.error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(250, 204, 21, 0.3);
+    border-color: rgba(250, 204, 21, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(250, 204, 21, 0.7);
+    border-color: rgba(250, 204, 21, 1);
+  }
+}
+
+.reminder-glow {
+  animation: pulse-glow 2.5s infinite ease-in-out;
+}
+
+/* Add/Replace these in your dashboard.css */
+
+/* Make the project container background slightly more visible on mobile 
+   to distinguish from the page background */
+.project-card {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Ensure the separation line is visible even on dark/gradient backgrounds */
+.project-card-container {
+    width: 100%;
+}
+
+@media (max-width: 640px) {
+    /* Adjust header text for mobile to save space */
+    .header-main-text {
+        font-size: 1.75rem !important;
+        text-align: left;
+    }
+
+    /* Override the previously forced center alignment to keep ID & Name together */
+    .project-card-content {
+        flex-direction: row !important; 
+        text-align: left !important;
+        align-items: center !important;
+    }
+
+    /* Ensure the buttons don't look squashed */
+    .project-card-buttons {
+        margin-top: 0;
+        width: auto;
+    }
+}
+
+/* Specific fix for the separation line color in Dark Mode */
+body.theme-dark .border-gray-300\/50 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 640px) {
+    .desktop-logo { display: none; }
+    .mobile-logo { display: block; }
+    .header-container {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    .header-actions {
+        order: -1; 
+        margin: 0 auto 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    .header-main-text {
+        font-size: 2.25rem; 
+        justify-content: center;
+    }
+    .project-card-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .project-card-buttons {
+        margin-top: 1rem;
+        width: 100%;
+        justify-content: center;
+    }
+    .project-card-buttons > button {
+        flex: 1; 
+    }
+}
