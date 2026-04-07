@@ -1,0 +1,949 @@
+:root {
+      --bg-gradient-start: #667eea; --bg-gradient-end: #764ba2;
+      --header-text: white; --header-subtext: rgba(255, 255, 255, 0.8);
+    }
+
+   body.theme-blue {
+      --bg-gradient-start: #667eea;
+      --bg-gradient-end: #764ba2;
+      --header-text: white;
+      --header-subtext: rgba(255, 255, 255, 0.8);
+    }
+
+    body.theme-green {
+      --bg-gradient-start: #34d399;
+      --bg-gradient-end: #10b981;
+      --header-text: white;
+      --header-subtext: rgba(255, 255, 255, 0.9);
+    }
+
+    body.theme-dark {
+      --bg-gradient-start: #1f2937;
+      --bg-gradient-end: #111827;
+      --header-text: #e5e7eb;
+      --header-subtext: #9ca3af;
+    }
+
+    body.theme-light {
+      --bg-gradient-start: #f9fafb;
+      --bg-gradient-end: #e5e7eb;
+      --header-text: #1f2937;
+      --header-subtext: #4b5563;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+      transition: background 0.5s ease;
+      min-height: 100vh;
+    }
+
+    .header-main-text { color: var(--header-text); }
+    .header-sub-text { color: var(--header-subtext); }
+
+    /* --- LOGO FIX START --- */
+    .header-icon {
+      border-radius: 50%;        /* Force Circle Shape */
+      background-color: white;   /* White background for visibility */
+      padding: 4px;              /* Space inside the circle */
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Nice shadow depth */
+      object-fit: contain;       /* Ensure image fits inside */
+      
+      /* Ensure colors are original */
+      filter: none !important; 
+      
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .header-icon.logo-enlarged {
+        transform: scale(1.8);
+        z-index: 50;
+    }
+
+    /* Light Theme: Make background transparent if preferred */
+    body.theme-light .header-icon {
+        background-color: transparent;
+        box-shadow: none;
+        padding: 0;
+    }
+    /* --- LOGO FIX END --- */
+    
+    .glass-effect {
+      backdrop-filter: blur(10px);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    body.theme-light .glass-effect, body.theme-blue .glass-effect, body.theme-green .glass-effect {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    body.theme-dark .glass-effect {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(55, 65, 81, 0.5);
+    }
+    body.theme-dark .text-gray-800 { color: #e5e7eb; }
+    body.theme-dark .text-gray-700 { color: #d1d5db; }
+    body.theme-dark .font-medium.text-gray-700 { color: #d1d5db; }
+    body.theme-dark .text-gray-600 { color: #9ca3af; }
+    body.theme-dark .text-gray-500 { color: #6b7280; }
+    body.theme-dark input, body.theme-dark select, body.theme-dark textarea { 
+        background-color: #374151;
+        border-color: #4b5563;
+        color: #e5e7eb;
+    }
+    body.theme-dark input::placeholder, body.theme-dark textarea::placeholder { color: #9ca3af; }
+    body.theme-dark .bg-white { background-color: #374151; }
+    body.theme-dark .border-gray-300 { border-color: #4b5563; }
+    body.theme-dark .bg-gray-50 { background-color: #1f2937; }
+    body.theme-dark .divide-y.divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #374151; }
+    body.theme-dark .card-hover:hover {
+        background: rgba(55, 65, 81, 0.8);
+    }
+    body.theme-dark .table-row:hover {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.15) 100%);
+    }
+    body.theme-dark .amount-in-words { color: #9ca3af; }
+
+    .amount-hidden {
+      filter: blur(8px);
+      user-select: none;
+      cursor: pointer;
+    }
+
+    @keyframes celebrate {
+      0% { transform: scale(1) rotate(0deg); }
+      25% { transform: scale(1.05) rotate(1deg); }
+      50% { transform: scale(1.1) rotate(0deg); }
+      75% { transform: scale(1.05) rotate(-1deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-slide-in {
+      animation: slideIn 0.5s ease-out;
+    }
+    
+    .amount-in-words {
+      font-size: 0.75rem;
+      pointer-events: none;
+      user-select: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+    
+    .input-container {
+      position: relative;
+    }
+    
+    .progress-glow {
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    }
+    
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-danger:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+    }
+    
+    .table-row {
+        cursor: pointer;
+    }
+    .table-row:hover {
+      background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.1) 100%);
+    }
+    
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1050;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      transform: translateX(400px);
+      transition: transform 0.3s ease;
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+    }
+    
+    .notification.success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    
+    .notification.error {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .storage-indicator {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(34, 197, 94, 0.9);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+    }
+
+    .bank-dropdown, .modal-bank-dropdown, .modal-category-container {
+      opacity: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .bank-dropdown.show, .modal-bank-dropdown.show, .modal-category-container.show {
+      opacity: 1;
+      max-height: 200px;
+    }
+
+    .custom-bank-input, .modal-custom-bank-input, .modal-custom-category-input {
+      opacity: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .custom-bank-input.show, .modal-custom-bank-input.show, .modal-custom-category-input.show {
+      opacity: 1;
+      max-height: 100px;
+    }
+
+    .field-label {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .nav-button {
+      padding: 0.75rem;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .back-button {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      color: white;
+    }
+
+    .back-button:hover {
+      box-shadow: 0 5px 15px rgba(107, 114, 128, 0.4);
+    }
+
+    .settings-button {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      color: white;
+    }
+
+    .settings-button:hover {
+      box-shadow: 0 5px 15px rgba(107, 114, 128, 0.4);
+    }
+    
+    .finance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .finance-action-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 0.25rem;
+        border-radius: 0.75rem;
+        transition: background-color 0.2s ease-in-out, transform 0.2s ease;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .finance-action-btn:hover {
+        transform: translateY(-2px);
+    }
+    body:not(.theme-dark) .finance-action-btn:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+    body.theme-dark .finance-action-btn:hover {
+        background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .finance-action-btn .icon-bg {
+        width: 3.5rem;
+        height: 3.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.25rem;
+        transition: all 0.2s ease;
+    }
+
+    .finance-action-btn:hover .icon-bg {
+        transform: scale(1.05);
+    }
+
+    .finance-action-btn i {
+        font-size: 1.5rem;
+    }
+
+    #transactionModal {
+        background-color: var(--bg-gradient-start);
+        background-image: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+    }
+    
+    body.theme-dark #transactionModal {
+        background-color: #1f2937;
+        background-image: none;
+    }
+
+    #closeTransactionModalBtn {
+        position: absolute;
+        top: 1rem;
+        right: 1.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        line-height: 1;
+        transition: all 0.2s ease;
+        z-index: 20;
+    }
+    body:not(.theme-dark) #closeTransactionModalBtn {
+        background-color: #e5e7eb;
+        color: #4b5563;
+    }
+    body:not(.theme-dark) #closeTransactionModalBtn:hover {
+        background-color: #d1d5db;
+    }
+     body.theme-dark #closeTransactionModalBtn {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #e5e7eb;
+    }
+     body.theme-dark #closeTransactionModalBtn:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Card Page Styles */
+    #cardPage .container {
+        perspective: 1200px;
+    }
+    #projectCardDisplay {
+    width: 100%;
+    max-width: 420px;
+    height: 260px;
+    margin: auto;
+    font-family: 'SF Mono', 'Courier New', Courier, monospace;
+    transition: transform 0.1s ease, background 0.5s ease;
+    transform-style: preserve-3d;
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4);
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Circuit Pattern Overlay */
+#projectCardDisplay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.15;
+    background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0);
+    background-size: 20px 20px;
+    pointer-events: none;
+}
+.card-installment {
+    background: linear-gradient(135deg, #0a2342 0%, #1a508b 100%) !important;
+}
+
+/* Finance Manager Mode: GREEN CARD */
+.card-finance {
+    background: linear-gradient(135deg, #004d3d 0%, #007a5e 100%) !important;
+}
+
+/* Logo specific to the card */
+.card-logo-container {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    padding: 5px;
+    width: 32px;
+    height: 32px;
+}
+    #projectCardDisplay::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 1rem;
+        transition: all 0.3s ease;
+    }
+    #projectCardDisplay::before {
+        background-image: linear-gradient(
+            -45deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.2) 40%,
+            rgba(255, 255, 255, 0) 100%
+        );
+        z-index: 2;
+    }
+    #projectCardDisplay::after { /* Glare effect */
+        background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.4), rgba(255,255,255,0) 40%);
+        z-index: 3;
+        opacity: 0;
+    }
+    #projectCardDisplay:hover::after {
+        opacity: 1;
+    }
+    
+    .card-chip {
+        width: 54px;
+        height: 42px;
+        background: linear-gradient(135deg, #ddcc99, #b09144);
+        border-radius: 6px;
+        border: 1px solid rgba(0,0,0,0.2);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 4px;
+        gap: 2px;
+    }
+    .card-chip::before, .card-chip::after {
+        content: '';
+        border: 1px solid #7d6a3c;
+        border-radius: 3px;
+    }
+    #cardPageNumber, #cardPageName, #cardPageValidThru {
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+    }
+    .card-label {
+        font-size: 0.65rem;
+        opacity: 0.8;
+        letter-spacing: 0.1em;
+        font-weight: 500;
+    }
+    
+    .mobile-logo {
+        display: none;
+    }
+
+    .header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .header-actions {
+        flex-shrink: 0;
+    }
+    /* START OF FILE paytrack.css (Added Styles) */
+.btn-faded {
+    opacity: 0.6;
+    filter: grayscale(40%);
+    border-color: rgba(0,0,0,0.05) !important;
+}
+
+.animate-slide-in {
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+ /* --- MOBILE HEADER FIX (Matches Image) --- */
+@media (max-width: 767px) {
+    .header-container {
+        display: block !important; /* Switch from flex to block for absolute positioning of children */
+        position: relative;
+        padding-top: 20px;
+        text-align: center;
+    }
+
+    /* Move buttons to the top right */
+    .header-actions {
+        position: absolute;
+        top: 0;
+        right: 0;
+        display: flex;
+        gap: 8px;
+    }
+
+    /* Target the logo inside the H1 and move it to top left */
+    .header-main-text img.header-icon {
+        position: absolute;
+        top: 0;
+        left: 0;
+        margin-right: 0 !important;
+        width: 45px !important;
+        height: 45px !important;
+    }
+
+    /* Center the Title Text */
+    .header-main-text {
+        display: block !important;
+        margin-top: 60px; /* Push text down so it doesn't overlap logo/buttons */
+        font-size: 1.8rem !important; /* Adjust size to match image */
+        font-weight: 800;
+        line-height: 1.2;
+        width: 100%;
+    }
+
+    /* Center Project Name and Subtext */
+    #project-name-header {
+        display: block;
+        text-align: center;
+        width: 100%;
+        font-size: 1.25rem !important;
+        margin-top: 15px;
+        color: #4b5563; /* Gray color like image */
+    }
+
+    .header-sub-text {
+        display: block;
+        text-align: center;
+        width: 100%;
+        font-size: 1rem !important;
+        margin-top: 5px;
+    }
+
+    /* Ensure buttons look like the image (rounded squares) */
+    .nav-button {
+        width: 45px;
+        height: 45px;
+        border-radius: 12px !important; /* Match the screenshot's rounded corners */
+        background: #4b5563 !important; /* Match the dark gray buttons in image */
+    }
+}
+    /* --- Improved Receipt Modal (Image Overlay Style) --- */
+#receiptModal {
+    background-color: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(15px);
+    padding: 2rem;
+}
+
+#receiptModalImage {
+    max-width: 95%;
+    max-height: 85vh;
+    border: 5px solid white;
+    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    border-radius: 10px;
+    object-fit: contain;
+    animation: zoomIn 0.3s ease-out;
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Detail Card specifically */
+#detailPage .glass-effect {
+    background: rgba(255, 255, 255, 1); /* Solid white for details like a bank statement */
+}
+
+body.theme-dark #detailPage .glass-effect {
+    background: #1f2937;
+}
+
+/* Make table rows feel clickable */
+.table-row {
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.table-row:last-child {
+    border-bottom: none;
+}
+#receiptModal {
+    background-color: rgba(0, 0, 0, 0.85); /* Dark background like screenshot */
+    backdrop-filter: blur(10px);
+}
+
+#receiptModalImage {
+    max-width: 90%;
+    max-height: 80vh;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    background: white; /* Ensures image is visible */
+    object-fit: contain;
+}
+
+#closeReceiptModalBtn {
+    top: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.6);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: transform 0.2s;
+}
+
+#closeReceiptModalBtn:hover {
+    transform: scale(1.1);
+    background: black;
+}
+
+/* --- FINANCE MODE: COMPUTER (ROW) vs MOBILE (GRID) --- */
+
+/* 1. Header Centering on Mobile */
+@media (max-width: 767px) {
+    body.finance-mode-on .header-container {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+    body.finance-mode-on #summaryCardsContainer {
+        display: flex !important;
+        flex-direction: column !important; /* Stacked cards on mobile */
+        gap: 1rem !important;
+    }
+    /* Mobile: 3 columns of icons (Screenshot style) */
+    body.finance-mode-on #financeActionGrid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 1.5rem 0.5rem !important;
+    }
+}
+
+/* 2. Computer View: Rows */
+@media (min-width: 768px) {
+    body.finance-mode-on .header-container {
+        flex-direction: row !important;
+        text-align: left !important;
+    }
+    body.finance-mode-on #summaryCardsContainer {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important; /* Cards in 1 row */
+    }
+    /* Computer: ALL buttons in 1 horizontal row */
+    body.finance-mode-on #financeActionGrid {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-around !important;
+        flex-wrap: nowrap !important;
+    }
+}
+
+/* 3. Circular Icon Styles */
+body.finance-mode-on .finance-action-btn {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+body.finance-mode-on .icon-bg {
+    width: 55px !important;
+    height: 55px !important;
+    border-radius: 50% !important;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Specific Colors */
+body.finance-mode-on #addIncomeBtn .icon-bg { background-color: #ecfdf5 !important; color: #10b981 !important; }
+body.finance-mode-on #addExpenseBtn .icon-bg { background-color: #fef2f2 !important; color: #ef4444 !important; }
+body.finance-mode-on #shortcutTransactionsBtn .icon-bg { background-color: #eff6ff !important; color: #3b82f6 !important; }
+body.finance-mode-on .icon-bg { background-color: #f3f4f6; color: #4b5563; } /* Default gray for others */
+
+body.finance-mode-on .finance-action-btn span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4b5563;
+    white-space: nowrap;
+}
+
+/* --- VIBRANT COLORS FOR ACTION BUTTONS (FINANCE MODE) --- */
+
+/* Add Income - Green */
+body.finance-mode-on #addIncomeBtn .icon-bg { 
+    background-color: #ecfdf5 !important; 
+    color: #10b981 !important; 
+}
+
+/* Add Expense - Red */
+body.finance-mode-on #addExpenseBtn .icon-bg { 
+    background-color: #fef2f2 !important; 
+    color: #ef4444 !important; 
+}
+
+/* Shortcuts - Blue/Cyan */
+body.finance-mode-on #shortcutTransactionsBtn .icon-bg { 
+    background-color: #eff6ff !important; 
+    color: #3b82f6 !important; 
+}
+
+/* History - Indigo/Deep Blue */
+body.finance-mode-on #viewHistoryBtnFinance .icon-bg { 
+    background-color: #e0e7ff !important; 
+    color: #4f46e5 !important; 
+}
+
+/* Chart - Amber/Yellow */
+body.finance-mode-on #viewChartBtn .icon-bg { 
+    background-color: #fffbeb !important; 
+    color: #f59e0b !important; 
+}
+
+/* View Card - Teal */
+body.finance-mode-on #viewCardBtn .icon-bg { 
+    background-color: #f0fdfa !important; 
+    color: #0d9488 !important; 
+}
+
+/* Share - Sky Blue */
+body.finance-mode-on #shareBtn .icon-bg { 
+    background-color: #f0f9ff !important; 
+    color: #0ea5e9 !important; 
+}
+
+/* Export - Purple */
+body.finance-mode-on #exportExcelBtn .icon-bg { 
+    background-color: #faf5ff !important; 
+    color: #a855f7 !important; 
+}
+
+/* Delete All - Slate/Gray */
+body.finance-mode-on #deleteAllBtnFinance .icon-bg { 
+    background-color: #f1f5f9 !important; 
+    color: #64748b !important; 
+}
+
+/* --- Dark Mode adjustments for colors --- */
+body.theme-dark.finance-mode-on .icon-bg {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+/* Adding a hover effect to make them feel interactive */
+body.finance-mode-on .finance-action-btn:hover .icon-bg {
+    transform: translateY(-3px);
+    filter: brightness(0.95);
+    transition: transform 0.2s, filter 0.2s;
+}
+/* --- SETTINGS: COLOR SELECTION HIGHLIGHT --- */
+/* --- SETTINGS: PROGRESS BAR COLOR SELECTION HIGHLIGHT --- */
+.color-option {
+    border: 2px solid transparent; /* Base border to prevent jumping when selected */
+    transition: all 0.3s ease;
+}
+
+.color-option.selected {
+    border: 4px solid #ffffff !important; /* White inner border */
+    outline: 3px solid #3b82f6; /* Blue outer glow/border */
+    transform: scale(1.08); /* Pop out slightly */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+/* Adjust for Dark Mode if necessary */
+body.theme-dark .color-option.selected {
+    outline-color: #60a5fa;
+    border-color: #1f2937 !important;
+}
+
+/* Ensure the progress bar transitions smoothly when color changes */
+#progressBar {
+    transition: width 0.6s ease-in-out, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* --- PROJECT INFO HIGHLIGHT (Installment Mode) --- */
+.project-setup-header {
+    background: rgba(59, 130, 246, 0.08); /* Light blue tint */
+    border: 2px dashed rgba(59, 130, 246, 0.3);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+}
+
+body.theme-dark .project-setup-header {
+    background: rgba(30, 41, 59, 0.5);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.setup-title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #3b82f6;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Ensure these fields stand out */
+.project-setup-header input {
+    background-color: white !important;
+    font-weight: 600;
+}
+
+body.theme-dark .project-setup-header input {
+    background-color: #1f2937 !important;
+}
+
+/* Hide this header entirely in Finance Mode */
+body.finance-mode-on .project-setup-header {
+    display: none !important;
+}
+
+/* Hint for the Project Configuration Area */
+#projectSetupSection {
+    cursor: help; /* Shows a help cursor to hint at extra info */
+    user-select: none;
+}
+
+#projectSetupSection:hover {
+    border-color: rgba(59, 130, 246, 0.6);
+    background: rgba(59, 130, 246, 0.12);
+}
+
+/* Dark mode adjustments for the new modal */
+body.theme-dark #projectDetailsModal .glass-effect {
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+body.theme-dark #projectDetailsModal .bg-gray-50 {
+    background: #334155;
+}
+/* Make the configuration area look like an interactive card */
+.project-setup-header {
+    cursor: pointer;
+    border: 2px solid rgba(59, 130, 246, 0.2) !important;
+    background: rgba(59, 130, 246, 0.05) !important;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.project-setup-header:hover {
+    background: rgba(59, 130, 246, 0.1) !important;
+    border-color: #3b82f6 !important;
+    transform: scale(1.01);
+}
+
+/* Add a "Info" badge to hint at double clicking */
+.project-setup-header::after {
+    content: 'Double-click for info';
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 10px;
+    color: #3b82f6;
+    font-weight: bold;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+/* Ensure the inputs inside don't block the click */
+.project-setup-header input {
+    pointer-events: none; /* Allows the double-click to pass through to the div */
+}
+
+/* Ensure the configuration area container captures the double-click */
+#projectSetupSection {
+    position: relative;
+    z-index: 10;
+}
+
+/* Allow clicks to go through the inputs to the parent container */
+#projectSetupSection input, 
+#projectSetupSection label, 
+#projectSetupSection .setup-title {
+    pointer-events: none;
+}
+
+/* Modal Scroll Styling */
+#projectDetailsModal::-webkit-scrollbar {
+    width: 8px;
+}
+#projectDetailsModal::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+}
+
+/* Responsive fixes for modal card */
+@media (max-width: 640px) {
+    #projectDetailsModal .glass-effect {
+        padding: 1.5rem;
+        margin: 1rem;
+        border-radius: 1.5rem;
+    }
+}
