@@ -469,15 +469,15 @@ importCardForm.addEventListener('submit', async (e) => {
 
         // 4. Add to the main project list
         const newProjectEntry = {
-            id: projectId,
-            displayId: generateNextDisplayId(localProjects),
-            name: cloudCard.originalName,
-            type: projectData.settings?.expenseMode ? 'finance' : 'installment',
-            cardNumber: cardNum // SAVE THE NUMBER so the friend can sync back!
-        };
+    id: projectId,
+    displayId: generateNextDisplayId(localProjects),
+    name: cloudCard.originalName,
+    type: projectData.settings?.expenseMode ? 'finance' : 'installment',
+    cardNumber: cardNum // <--- CRITICAL: This must be saved to enable syncing
+};
 
-        localProjects.push(newProjectEntry);
-        localStorage.setItem(PROJECTS_KEY, JSON.stringify(localProjects));
+localProjects.push(newProjectEntry);
+localStorage.setItem(PROJECTS_KEY, JSON.stringify(localProjects));
 
         // 5. Success UI
         showNotification("Project imported successfully!", "success");
