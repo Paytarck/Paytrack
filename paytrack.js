@@ -4,6 +4,16 @@ import {
     updateGlobalCard,   // Now these will not be faded
     syncDataToCloud 
 } from './auth.js';
+
+// Helper to convert images to strings for storage
+const readFileAsDataURL = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+    });
+};
 // --- CLOUD SYNC HELPERS ---
 
 // 1. Sync User Profile (List of projects, global settings)
@@ -476,6 +486,8 @@ async function loadInitialData() {
     updateSummary();
     updateUIMode(); 
 
+    setTodayDate();
+
     // 3. CLOUD SYNC IN BACKGROUND
     if (currentProject.cardNumber) {
         try {
@@ -594,42 +606,38 @@ function openProjectDetails() {
         return;
     }
 
-    // 1. Fill Text Data
     elements.viewDetailProjectName.textContent = data.name;
     elements.viewDetailTotalCost.textContent = formatCurrency(data.totalCost);
     elements.viewDetailDate.textContent = data.agreementDate;
     elements.viewDetailDesc.textContent = data.description;
 
-    // 2. Handle Gallery
     const galleryContainer = document.getElementById('projectAgreementGallery');
     const containerWrapper = elements.viewDetailReceiptContainer;
-    
-    galleryContainer.innerHTML = ''; // Clear existing
+    galleryContainer.innerHTML = ''; 
 
-    // Support both old data (receipt) and new data (receipts array)
+    // Get images from either 'receipts' array or old single 'receipt' field
     const imagesToShow = data.receipts || (data.receipt ? [data.receipt] : []);
 
     if (imagesToShow && imagesToShow.length > 0) {
+        // --- FIX: Ensure the parent container is unhidden ---
         containerWrapper.classList.remove('hidden');
+        containerWrapper.style.display = 'block';
         
-       imagesToShow.forEach((imageSrc, index) => {
-    const img = document.createElement('img');
-    img.src = imageSrc;
-    img.className = 'agreement-gallery-thumb';
-    
-    img.addEventListener('click', (e) => {
-        e.stopPropagation();
-        // Pass ALL images and the starting index
-        openImageGallery(imagesToShow, index);
-    });
-    
-    galleryContainer.appendChild(img);
-});
+        imagesToShow.forEach((imageSrc, index) => {
+            const img = document.createElement('img');
+            img.src = imageSrc;
+            img.className = 'agreement-gallery-thumb';
+            img.onclick = (e) => {
+                e.stopPropagation();
+                openImageGallery(imagesToShow, index);
+            };
+            galleryContainer.appendChild(img);
+        });
     } else {
         containerWrapper.classList.add('hidden');
+        containerWrapper.style.display = 'none';
     }
 
-    // 3. Show Modal
     elements.projectDetailsModal.classList.remove('hidden');
     document.body.style.overflow = 'hidden'; 
 }
@@ -803,7 +811,7 @@ function renderInitReceiptPreviews() {
     
     elements.initReceiptPreviewContainer.innerHTML = '';
     if (tempInitReceipts.length > 0) {
-        // FIX FOR BUG #1: Ensure hidden class is removed and display is flex/grid
+        // Force the grid to show
         elements.initReceiptPreviewContainer.classList.remove('hidden');
         elements.initReceiptPreviewContainer.style.display = 'grid'; 
         
@@ -811,7 +819,7 @@ function renderInitReceiptPreviews() {
             const div = document.createElement('div');
             div.className = 'receipt-preview-item';
             div.innerHTML = `
-                <img src="${src}" class="shadow-sm">
+                <img src="${src}" class="w-full h-full object-cover rounded-lg border-2 border-blue-200">
                 <div class="remove-receipt-badge" onclick="removeTempInitReceipt(${index})">&times;</div>
             `;
             elements.initReceiptPreviewContainer.appendChild(div);
@@ -1215,9 +1223,17 @@ function showInputSelectionModal(type) {
 }
 
 function setTodayDate() {
+    // Get date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
-    elements.paymentDate.value = today;
-    elements.modalDate.value = today;
+    
+    // Set for Standard Installment Form
+    if (elements.paymentDate) elements.paymentDate.value = today;
+    
+    // Set for Finance Mode Modal
+    if (elements.modalDate) elements.modalDate.value = today;
+    
+    // SET FOR INITIALIZATION FORM (The total amount setup)
+    if (elements.initDate) elements.initDate.value = today; 
 }
 
 function showPage(page) {
