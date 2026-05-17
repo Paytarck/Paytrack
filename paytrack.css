@@ -618,19 +618,17 @@ html, body {
 }
     /* --- Improved Receipt Modal (Image Overlay Style) --- */
 #receiptModal {
-    background-color: rgba(0, 0, 0, 0.95);
-    backdrop-filter: blur(15px);
-    z-index: 2000 !important;
+    display: none; /* Hidden by default */
     position: fixed;
     inset: 0;
-    display: flex; /* Centers the image */
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 2000;
     align-items: center;
     justify-content: center;
 }
 
-/* This forces the modal to disappear when you click close */
-#receiptModal.hidden {
-    display: none !important;
+#receiptModal:not(.hidden) {
+    display: flex; /* Show only when .hidden is removed */
 }
 
 #receiptModalImage {
