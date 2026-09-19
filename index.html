@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="capacitor.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Pay-Track</title>
     <link rel="icon" type="image/png" href="Paytrack-icon.png">
     <!-- Font Awesome for Background Icons -->
@@ -12,6 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="splash.css">
+    <script src="sw-register.js"></script>
 </head>
 <body>
 
@@ -39,7 +41,7 @@
             <div class="loader-ring"></div>
             <div class="logo-container">
                 <!-- Using onerror to handle missing images gracefully -->
-                <img src="Paytrack-icon.png" alt="Pay-Track" class="splash-logo" onerror="this.src='splsh app image.jpeg'">
+                <img src="Paytrack-icon.png" alt="Pay-Track" class="splash-logo" onerror="this.src='splash.jpeg'">
             </div>
         </div>
 
@@ -62,13 +64,40 @@
     </div>
 
     <script>
-        // Redirect after animation completes (approx 4 seconds)
-        setTimeout(() => {
-            window.location.replace('lock.html');
-        }, 5000);
-    </script>
+    // 1. REDIRECTION LOGIC (This runs no matter what)
+    // Always go to the lock screen — never a separate offline page.
+    // lock.html (and dashboard/settings/paytrack beyond it) already work
+    // fully offline: the service worker caches the app shell and every
+    // vendor asset it needs, and login/PIN checks run entirely off
+    // localStorage. Connectivity is only needed for the cloud-sync
+    // features, which already fail gracefully on their own when offline.
+    const startApp = () => {
+        console.log("Timer finished, redirecting...");
+        window.location.href = 'lock.html';
+    };
+
+    // Start the timer immediately
+    setTimeout(startApp, 4000); // Increased to 4 seconds to ensure user sees your beautiful splash
+
+    // 2. FULLSCREEN / STATUS BAR LOGIC (Safe Mode)
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Check if Capacitor exists before using it
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {
+            const { StatusBar } = window.Capacitor.Plugins;
+            try {
+                // Make the WebView cover the whole screen
+                await StatusBar.setOverlaysWebView({ overlay: true });
+                // Set background to transparent
+                await StatusBar.setBackgroundColor({ color: '#00000000' }); 
+                // Set icon color
+                await StatusBar.setStyle({ style: 'LIGHT' }); 
+            } catch (e) {
+                console.warn("StatusBar setup failed, but app will still load.", e);
+            }
+        } else {
+            console.log("Capacitor not detected. Running in web mode.");
+        }
+    });
+</script>
 </body>
-
-</html>   
-
-
+</html>

@@ -2,6 +2,7 @@ const translations = {
   en: {
     // ... existing ...
     rupees: "Rupees",
+    setTotalAmount: "Add Total Amount",
     dollars: "Dollars",
     euros: "Euros",
     pounds: "Pounds",
@@ -164,6 +165,7 @@ const translations = {
     lastTransaction: "Last Transaction",
   },
   es: {
+    setTotalAmount: "Agregar Monto Total",
     rupees: "Rupias",
     dollars: "Dólares",
     euros: "Euros",
@@ -326,6 +328,7 @@ const translations = {
     lastTransaction: "Última Transacción",
   },
   ur: {
+    setTotalAmount: "کل رقم شامل کریں",
     rupees: "روپے",
     dollars: "ڈالر",
     euros: "یورو",
@@ -497,7 +500,24 @@ const getLanguage = () => {
 const translatePage = () => {
     const lang = getLanguage();
     document.documentElement.lang = lang;
-    document.documentElement.dir = lang === 'ur' ? 'rtl' : 'ltr';
+
+    // NOTE ON LAYOUT: we intentionally keep the document direction as 'ltr'
+    // even for Urdu. The app's CSS (Tailwind flex rows, absolute positioning,
+    // margin-left/right, transforms, etc.) was built assuming a left-to-right
+    // layout and was never written with RTL-mirrored equivalents. Setting
+    // document.documentElement.dir = 'rtl' flips flexbox row ordering,
+    // justify-content sides, and default text alignment everywhere at once,
+    // which is exactly what was breaking the layout when switching to Urdu.
+    //
+    // Urdu script itself still renders correctly right-to-left character by
+    // character regardless of the container's dir (that's handled by the
+    // Unicode bidi algorithm, not by the `dir` attribute), so leaving the
+    // document ltr does not break Urdu text rendering — it only keeps the
+    // app's chrome (headers, nav, buttons, cards) from being mirrored.
+    // We still flag Urdu text blocks with a class so paragraph-level text
+    // can be right-aligned via CSS without touching layout containers.
+    document.documentElement.dir = 'ltr';
+    document.body.classList.toggle('lang-ur', lang === 'ur');
 
     document.querySelectorAll('[data-translate-key]').forEach(element => {
         const key = element.getAttribute('data-translate-key');

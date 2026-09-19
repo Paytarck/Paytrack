@@ -138,8 +138,8 @@ body, html {
 
 .splash-logo {
     /* Increased Size from 100px to 150px */
-    width: 210px;
-    height: 210px;
+    width: 200px;
+    height: 205px;
     object-fit: contain;
     border-radius: 100%;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); 
@@ -185,4 +185,16 @@ body, html {
 /* --- Footer (Hidden) --- */
 .footer-credit {
     display: none;
+}
+
+body {
+    /* This ensures the background covers the whole screen */
+    min-height: 100vh;
+    padding-top: env(safe-area-inset-top);    /* Adds space for the clock/notch */
+    padding-bottom: env(safe-area-inset-bottom); /* Adds space for the home bar */
+}
+
+/* If your header feels too close to the top icons, add it to your header container too */
+.header-container {
+    padding-top: 10px; /* Extra padding so icons don't hit the clock */
 }

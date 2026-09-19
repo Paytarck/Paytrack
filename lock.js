@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pinInput.value = '';
         updateDots();
         resetDotColors();
+        isProcessing = false;
     };
 
     const updateDots = () => {
@@ -113,45 +114,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UPDATED BIOMETRIC LOGIC (CAPACITOR NATIVE) ---
 const checkBiometric = async () => {
-    const isEnabled = localStorage.getItem('biometricEnabled') === 'true';
-    if (!isEnabled) return;
-
-    // Show the button visually
-    if (biometricContainer) {
-        biometricContainer.classList.remove('hidden');
-        biometricBtn.onclick = () => triggerBiometricAuth();
+    // 1. SAFETY CHECK: If the plugin is missing, hide the button
+    if (!window.Capacitor || !window.Capacitor.Plugins.NativeBiometric) {
+        if (biometricContainer) biometricContainer.classList.add('hidden');
+        return; 
     }
 
-    // AUTO-PROMPT: Try to pop up the fingerprint immediately on load
-    setTimeout(() => {
-        triggerBiometricAuth();
-    }, 800);
+    const { NativeBiometric } = window.Capacitor.Plugins;
+
+    try {
+        const result = await NativeBiometric.isAvailable();
+        const isEnabled = localStorage.getItem(BIOMETRIC_KEY) === 'true';
+
+        if (isEnabled && result.isAvailable) {
+            biometricContainer.classList.remove('hidden');
+            biometricBtn.addEventListener('click', triggerBiometricAuth);
+
+            // --- NEW: AUTO-PROMPT FEATURE ---
+            // This triggers the fingerprint prompt automatically 600ms after the page loads
+            setTimeout(() => {
+                triggerBiometricAuth();
+            }, 600);
+        }
+    } catch (err) {
+        console.error("Biometric init error:", err);
+    }
 };
 
 const triggerBiometricAuth = async () => {
+    if (!window.Capacitor || !window.Capacitor.Plugins.NativeBiometric) return;
+
     const { NativeBiometric } = window.Capacitor.Plugins;
     
     try {
+        // This triggers the system fingerprint/FaceID UI
         await NativeBiometric.verifyIdentity({
-            reason: "Unlock PayTrack",
+            reason: "Log in to PayTrack",
             title: "Security Check",
-            maxAvailableAuthentication: true, // IMPORTANT: Allows in-display sensors
+            maxAvailableAuthentication: true,
             allowDeviceCredential: true 
         });
+
+        // --- FIXED: REDIRECTION LOGIC ---
+        // If the code reaches here, the fingerprint was accepted!
+        colorDots('success'); 
+        showFeedback("Identity Verified!", "success");
         
-        // Success Logic
-        const dots = document.querySelectorAll('.dot');
-        dots.forEach(dot => { dot.classList.add('filled', 'success'); });
-        showFeedback("Unlocked", "success");
-        sessionStorage.setItem('paytrackUserSession', 'true');
-        setTimeout(() => window.location.replace('dashboard.html'), 500);
+        // 1. Set the session to 'true' so dashboard allows entry
+        sessionStorage.setItem(USER_SESSION_KEY, 'true');
         
+        // 2. Redirect to dashboard
+        setTimeout(() => {
+            window.location.replace('dashboard.html');
+        }, 500);
+
     } catch (err) {
-        console.log("Biometric cancelled or failed");
-        showFeedback("Use PIN instead", "error");
+        console.error("Biometric failed", err);
+        // If user cancels or it fails, don't redirect, just show feedback
+        showFeedback("Verification failed. Use PIN.", "error");
     }
 };
-
 
 
     // --- PIN LOGIC ---
@@ -252,7 +274,12 @@ const triggerBiometricAuth = async () => {
                     if (mode === 'login') handleLogin(finalPin);
                     else if (mode === 'create') handleCreate(finalPin);
                     else if (mode === 'confirm') handleConfirm(finalPin);
-                    isProcessing = false;
+                    // isProcessing is intentionally left true here. Each handler
+                    // above schedules its own delayed UI reset (resetInput /
+                    // setMode), and THOSE are what clear isProcessing. Clearing
+                    // it here would let the keypad accept new digits before the
+                    // previous PIN attempt has actually been cleared from
+                    // pinInput, causing fast typing to silently lose input.
                 }, 150);
             }
         }

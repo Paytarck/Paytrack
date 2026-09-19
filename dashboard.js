@@ -1,25 +1,66 @@
 // dashboard.js
-import { fetchProjectByCard, syncLocalCardsToCloud, subscribeToUserData, downloadUserData } from './auth.js';
+// NOTE: auth.js (and the Firebase SDK it loads from gstatic.com) is loaded
+// lazily via dynamic import() everywhere below, never as a static top-level
+// `import ... from './auth.js'`. A static import is all-or-nothing: if the
+// device is offline and that network fetch fails, the ENTIRE module fails to
+// load and NONE of the code in this file runs — no rendering, no buttons,
+// nothing. Loading it lazily means the dashboard always works from local
+// data first, and cloud features simply sit out (and quietly retry) when
+// there's no connection.
 
-async function compressImage(base64Str) {
+// Optimizes an uploaded image down to ~targetKB (default 30KB) by progressively
+// lowering JPEG quality, then shrinking dimensions if that alone isn't enough.
+async function compressImage(base64Str, targetKB = 30) {
     return new Promise((resolve) => {
         const img = new Image();
-        img.src = base64Str;
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 800; 
+            const targetBytes = targetKB * 1024;
+            const MAX_WIDTH = 800;
             let width = img.width;
             let height = img.height;
             if (width > MAX_WIDTH) {
-                height = (MAX_WIDTH / width) * height;
+                height = Math.round((MAX_WIDTH / width) * height);
                 width = MAX_WIDTH;
             }
-            canvas.width = width;
-            canvas.height = height;
+
+            const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.6)); // 60% quality to ensure it fits 1MB
+
+            const render = (w, h) => {
+                canvas.width = w;
+                canvas.height = h;
+                ctx.clearRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+            };
+            const estimateBytes = (dataUrl) => Math.round(dataUrl.length * 0.75);
+
+            render(width, height);
+            let quality = 0.6;
+            let result = canvas.toDataURL('image/jpeg', quality);
+
+            while (estimateBytes(result) > targetBytes && quality > 0.1) {
+                quality -= 0.1;
+                result = canvas.toDataURL('image/jpeg', quality);
+            }
+
+            let safety = 0;
+            while (estimateBytes(result) > targetBytes && width > 100 && safety < 10) {
+                width = Math.round(width * 0.85);
+                height = Math.round(height * 0.85);
+                render(width, height);
+                quality = 0.6;
+                result = canvas.toDataURL('image/jpeg', quality);
+                while (estimateBytes(result) > targetBytes && quality > 0.1) {
+                    quality -= 0.1;
+                    result = canvas.toDataURL('image/jpeg', quality);
+                }
+                safety++;
+            }
+
+            resolve(result);
         };
+        img.onerror = () => resolve(base64Str);
+        img.src = base64Str;
     });
 }
 // --- 1. CONSTANTS ---
@@ -38,7 +79,43 @@ async function triggerCloudSync() {
         console.log("Dashboard: Auto-sync triggered");
     } catch (e) {
         console.log("Sync skipped (offline or error)");
+        scheduleBackgroundSync();
     }
+}
+
+// Registers a Background Sync request so the browser retries the sync on
+// our behalf the instant connectivity returns — even if this tab is in the
+// background or the user has moved to another app — instead of relying
+// solely on this page happening to still be open and its 'online' listener
+// firing. Best-effort: not every browser supports Background Sync (notably
+// iOS Safari/WebViews), so this silently does nothing there, and the
+// existing 'online' listener below remains the primary sync path.
+function scheduleBackgroundSync() {
+    if (!('serviceWorker' in navigator) || !('SyncManager' in window)) return;
+    navigator.serviceWorker.ready
+        .then((reg) => reg.sync.register('paytrack-sync'))
+        .catch(() => {}); // unsupported or registration failed — no-op
+}
+
+// When the service worker's Background Sync fires (see sw.js), it messages
+// every open PayTrack tab so it can flush any changes made while offline
+// using the data and Firebase SDK already available here on the page.
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'PAYTRACK_FLUSH_SYNC') {
+            triggerCloudSync();
+        }
+    });
+}
+
+// Wraps a promise so a slow/offline cloud sync can never block navigation
+// forever — after `ms`, we give up waiting and let the caller proceed
+// (the change is still saved locally and will retry sync on next load).
+function withTimeout(promise, ms = 4000) {
+    return Promise.race([
+        Promise.resolve(promise),
+        new Promise(resolve => setTimeout(resolve, ms))
+    ]);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -47,6 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 1. DOM ELEMENTS ---
     const newProjectForm = document.getElementById('newProjectForm');
     const newProjectNameInput = document.getElementById('newProjectName');
+    newProjectNameInput?.addEventListener('input', () => {
+        document.getElementById('newProjectNameError')?.classList.add('hidden');
+        newProjectNameInput.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+    });
     const newProjectType = document.getElementById('newProjectType');
     const projectListContainer = document.getElementById('projectList');
     const noProjectsMessage = document.getElementById('noProjects');
@@ -137,21 +218,38 @@ nSearch?.addEventListener('click', () => {
 
     // Close add panel if open
     addPanel.classList.add('hidden');
+    addPanel.classList.remove('flex');
     updateNavActive(isHidden ? nSearch : null);
 
     if (isHidden) {
         findPanel.classList.remove('hidden');
-        findPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        setTimeout(() => document.getElementById('projectSearchInput').focus(), 400);
+        findPanel.classList.add('flex');
+        document.body.style.overflow = 'hidden'; // Lock background scrolling behind the modal
+        renderSearchResults(); // Show results (or all projects) as soon as it opens
+        setTimeout(() => document.getElementById('projectSearchInput').focus(), 300);
     } else {
         findPanel.classList.add('hidden');
+        findPanel.classList.remove('flex');
+        document.body.style.overflow = 'auto';
     }
 });
 
 // Close find panel via X button
 document.getElementById('closeFindPanel')?.addEventListener('click', () => {
     document.getElementById('findProjectPanel').classList.add('hidden');
+    document.getElementById('findProjectPanel').classList.remove('flex');
+    document.body.style.overflow = 'auto';
     updateNavActive(null);
+});
+
+// Close find panel by clicking the blurred backdrop
+document.getElementById('findProjectPanel')?.addEventListener('click', (e) => {
+    if (e.target.id === 'findProjectPanel') {
+        e.target.classList.add('hidden');
+        e.target.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+        updateNavActive(null);
+    }
 });
 
 // 2. Sort Logic (Action Sheet)
@@ -204,32 +302,53 @@ nAdd?.addEventListener('click', () => {
 
     // Close find panel if open
     findPanel.classList.add('hidden');
+    findPanel.classList.remove('flex');
     updateNavActive(isHidden ? nAdd : null);
 
     if (isHidden) {
         addPanel.classList.remove('hidden');
+        addPanel.classList.add('flex');
+        document.body.style.overflow = 'hidden'; // Lock background scrolling behind the modal
         document.getElementById('tabCreate').click();
-        addPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        setTimeout(() => document.getElementById('newProjectName').focus(), 400);
+        setTimeout(() => document.getElementById('newProjectName').focus(), 300);
     } else {
         addPanel.classList.add('hidden');
+        addPanel.classList.remove('flex');
+        document.body.style.overflow = 'auto';
     }
 });
 
 // Close add panel via X button
 document.getElementById('closeAddPanel')?.addEventListener('click', () => {
     document.getElementById('addProjectPanel').classList.add('hidden');
+    document.getElementById('addProjectPanel').classList.remove('flex');
+    document.body.style.overflow = 'auto';
     updateNavActive(null);
+});
+
+// Close add panel by clicking the blurred backdrop
+document.getElementById('addProjectPanel')?.addEventListener('click', (e) => {
+    if (e.target.id === 'addProjectPanel') {
+        e.target.classList.add('hidden');
+        e.target.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+        updateNavActive(null);
+    }
 });
 
 // (updateNavActive defined after nav elements are declared)
 
 // 4. Sync Logic
 nSync?.addEventListener('click', async () => {
+    if (!navigator.onLine) {
+        showNotification("You're offline — changes are saved locally and will sync automatically once you're back online", "error");
+        return;
+    }
     const icon = nSync.querySelector('i');
     icon.classList.add('fa-spin');
     try {
-        await triggerCloudSync();
+        await triggerCloudSync();   // push local changes up
+        await pullDashboardData(true); // pull latest project list back down (throws on failure so we can report it honestly)
         showNotification("Sync Successful", "success");
     } catch (e) {
         showNotification("Sync Failed", "error");
@@ -240,6 +359,7 @@ nSync?.addEventListener('click', async () => {
 
 // 5. Settings Logic
 nSettings?.addEventListener('click', () => {
+    if (window.showLoading) window.showLoading('Opening settings...');
     window.location.href = 'settings.html';
 });
     // --- 3. INITIALIZATION & CLOUD SYNC ---
@@ -271,7 +391,60 @@ nSettings?.addEventListener('click', () => {
         // edits made on another device (totalCost, metadata, receipts) are written
         // into localStorage here in real time - without needing a page refresh.
         subscribeToAllProjectCards(auth);
+    }).catch(e => console.log('Dashboard cloud listeners unavailable (offline?):', e));
+
+    // Belt-and-braces: periodically pull the project list directly, in case
+    // the real-time listener above ever misses an update (dropped
+    // connection, etc.). This is what makes a project created on another
+    // device show up here automatically, without reloading this page.
+    setInterval(() => {
+        if (document.visibilityState === 'visible' && navigator.onLine) {
+            pullDashboardData(true);
+        }
+    }, 60 * 1000); // every 60 seconds
+
+    // Also refresh immediately whenever the user comes back to this tab/app.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && navigator.onLine) {
+            pullDashboardData(true);
+        }
     });
+}
+
+// Reconnect handling: the instant the browser regains connectivity, push
+// anything changed while offline and pull the latest project list back
+// down, then reflect it in the shared status pill.
+window.addEventListener('online', async () => {
+    if (window.PayTrackNet) window.PayTrackNet.setStatus('syncing', 'Syncing…');
+    try {
+        await triggerCloudSync();
+        await pullDashboardData(true);
+        if (window.PayTrackNet) window.PayTrackNet.setStatus('online', 'Synced');
+    } catch (e) {
+        console.log('Reconnect sync failed:', e);
+        if (window.PayTrackNet) window.PayTrackNet.setStatus('error', 'Sync failed');
+    }
+});
+
+// Fetches the latest project list straight from the user's cloud profile
+// and merges it in. Used both by the periodic background timer and by the
+// manual "Sync Now" button.
+async function pullDashboardData(showErrors = false) {
+    if (!username) return;
+    try {
+        const auth = await import('./auth.js');
+        const newData = await auth.downloadUserData(username);
+        if (newData && newData.projects) {
+            localStorage.setItem('allTrackerProjects', JSON.stringify(newData.projects));
+            renderProjects();
+            applyTheme();
+            if (typeof translatePage === 'function') translatePage();
+            subscribeToAllProjectCards(auth);
+        }
+    } catch (e) {
+        console.log("Dashboard pull skipped (offline or error)", e);
+        if (showErrors) throw e;
+    }
 }
 
 // Tracks active card listeners so we never create duplicates
@@ -430,10 +603,20 @@ document.getElementById('editProjectForm').addEventListener('submit', async (e) 
 
     } catch (err) {
         console.error("Sync Error:", err);
-        alert("Failed to sync. Please check your internet.");
+        // The edit was already saved to localStorage above (step 3) before
+        // any network call was attempted, so the user's change is NOT lost —
+        // only the cloud push failed (most likely because they're offline).
+        // A blocking alert() here would misleadingly suggest the edit itself
+        // failed. Show a normal toast instead, and queue a background sync
+        // so it retries automatically once connectivity returns.
+        scheduleBackgroundSync();
+        document.getElementById('editProjectModal').classList.add('hidden');
+        renderProjects();
+        showNotification("Saved locally — will sync when you're back online", "error");
     } finally {
         submitBtn.disabled = false;
         if(spinner) spinner.classList.add('hidden');
+        if (window.hideLoading) window.hideLoading(); // guarantee the global loader always closes
     }
 });
 // A. Wire up the Dashboard "Edit" button
@@ -497,10 +680,19 @@ window.removeEditImage = (index) => {
         const settings = JSON.parse(localStorage.getItem(GLOBAL_SETTINGS_KEY)) || {};
         const themeName = settings.theme || 'default';
         document.body.className = document.body.className.replace(/theme-\w+/g, '').trim();
-        if (themeName !== 'default') document.body.classList.add(`theme-${themeName}`);
+        // Clear any leftover inline custom-theme vars from a previous custom theme
+        if (document.body.style.removeProperty) {
+            ['--custom-color-start','--custom-color-end','--custom-background','--custom-header-text','--custom-header-subtext','--custom-button-bg','--custom-button-hover-bg','--custom-icon-filter'].forEach(v => document.body.style.removeProperty(v));
+        }
+        if (themeName === 'custom' && window.ThemeUtils) {
+            window.ThemeUtils.applyActiveCustomTheme(settings.activeCustomThemeId);
+        } else if (themeName !== 'default') {
+            document.body.classList.add(`theme-${themeName}`);
+        }
     }
 
     function showNotification(message, type = 'success') {
+        if (window.hideLoading) window.hideLoading(); // action finished, dismiss the loader
         if(!notificationElement) return;
         notificationElement.textContent = message;
         notificationElement.className = `notification ${type} show`;
@@ -513,8 +705,10 @@ window.removeEditImage = (index) => {
 
     function saveProjects(projects) {
         localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-        // This triggers the sync safely because data is now locally present
-        triggerCloudSync();
+        // Return the promise so callers that are about to navigate away can
+        // await it — otherwise the browser can cancel the in-flight cloud
+        // write and other devices never see the change.
+        return triggerCloudSync();
     }
 
     function generateNextDisplayId(projects) {
@@ -578,7 +772,7 @@ window.removeEditImage = (index) => {
                 <div class="flex items-center justify-end gap-2 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-gray-100">
                     <button class="btn-primary text-white w-10 h-10 flex items-center justify-center rounded-lg open-project-btn" data-project-id="${project.id}"><i class="fas fa-folder-open"></i></button>
                     <button class="btn-secondary text-white w-10 h-10 flex items-center justify-center rounded-lg edit-project-btn" data-project-id="${project.id}"><i class="fas fa-edit"></i></button>
-                    <button class="btn-danger text-white w-10 h-10 flex items-center justify-center rounded-lg delete-project-btn" data-project-id="${project.id}"><i class="fas fa-trash"></i></button>
+                    <button class="btn-danger text-white w-10 h-10 flex items-center justify-center rounded-lg delete-project-btn" data-no-loading data-project-id="${project.id}"><i class="fas fa-trash"></i></button>
                 </div>
 
             </div>
@@ -589,8 +783,66 @@ window.removeEditImage = (index) => {
         }
     }
 
+    // Live search results inside the Find Project modal
+    function renderSearchResults() {
+        const resultsContainer = document.getElementById('searchResultsContainer');
+        const statusEl = document.getElementById('searchResultsStatus');
+        if (!resultsContainer || !statusEl) return;
+
+        const searchTerm = (projectSearchInput.value || '').toLowerCase().trim();
+        const projects = getProjects();
+
+        const matches = projects.filter(p => {
+            const matchesType = currentFilter === 'all' || p.type === currentFilter;
+            const matchesSearch = !searchTerm ||
+                p.name.toLowerCase().includes(searchTerm) ||
+                (p.displayId && p.displayId.toLowerCase().includes(searchTerm));
+            return matchesType && matchesSearch;
+        });
+
+        if (matches.length === 0) {
+            statusEl.innerHTML = searchTerm
+                ? `<i class="fas fa-circle-exclamation text-red-500 mr-1"></i> No project found matching "<strong>${projectSearchInput.value.trim()}</strong>"`
+                : `<i class="fas fa-folder-open text-gray-400 mr-1"></i> No projects yet.`;
+            statusEl.className = 'text-sm font-semibold text-red-500 mb-2';
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        statusEl.innerHTML = `<i class="fas fa-circle-check text-green-500 mr-1"></i> ${matches.length} project${matches.length === 1 ? '' : 's'} found`;
+        statusEl.className = 'text-sm font-semibold text-green-600 mb-2';
+
+        resultsContainer.innerHTML = matches.map(p => `
+            <button type="button" class="search-result-btn open-project-btn w-full flex items-center justify-between gap-3 px-4 py-3 bg-white/80 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl hover:border-green-400 hover:bg-green-50 dark:hover:bg-gray-700 transition-all text-left" data-project-id="${p.id}">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-600 rounded-lg px-2 py-1 shrink-0">
+                        <span class="text-[8px] font-bold text-gray-400 uppercase leading-none">ID</span>
+                        <span class="text-xs font-black text-gray-700 dark:text-gray-200">${p.displayId || 'P'}</span>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="font-bold text-gray-800 dark:text-white truncate">${p.name}</p>
+                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${p.type === 'finance' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">${p.type}</span>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-400 shrink-0"></i>
+            </button>
+        `).join('');
+    }
+
     // --- 5. EVENT LISTENERS ---
-    projectSearchInput.addEventListener('input', renderProjects);
+    projectSearchInput.addEventListener('input', () => {
+        renderProjects();
+        renderSearchResults();
+    });
+
+    // Clicking a live search result opens that project directly
+    document.getElementById('searchResultsContainer')?.addEventListener('click', (e) => {
+        const target = e.target.closest('.search-result-btn');
+        if (!target) return;
+        if (window.showLoading) window.showLoading('Opening project...');
+        sessionStorage.setItem('currentProjectId', target.dataset.projectId);
+        window.location.href = 'paytrack.html';
+    });
 
     filterButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -598,6 +850,7 @@ window.removeEditImage = (index) => {
             e.target.classList.remove('bg-gray-200', 'text-gray-700'); e.target.classList.add('bg-blue-600', 'text-white');
             currentFilter = e.target.dataset.filter;
             renderProjects();
+            renderSearchResults();
         });
     });
 
@@ -605,9 +858,22 @@ window.removeEditImage = (index) => {
     e.preventDefault();
     const projectName = newProjectNameInput.value.trim();
     const selectedType = newProjectType.value;
+    const nameErrorEl = document.getElementById('newProjectNameError');
 
     if (projectName) {
         const projects = getProjects();
+
+        // Prevent creating a project whose name already exists (case-insensitive)
+        const nameTaken = projects.some(p => p.name.trim().toLowerCase() === projectName.toLowerCase());
+        if (nameTaken) {
+            if (nameErrorEl) nameErrorEl.classList.remove('hidden');
+            newProjectNameInput.classList.add('border-red-500', 'ring-2', 'ring-red-500');
+            newProjectNameInput.focus();
+            return;
+        }
+        if (nameErrorEl) nameErrorEl.classList.add('hidden');
+        newProjectNameInput.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+
         const projectId = Date.now();
         
         const { generateCardNumber, updateGlobalCard } = await import('./auth.js');
@@ -622,18 +888,24 @@ window.removeEditImage = (index) => {
         };
         
         projects.push(newProject);
-        
-        // This saves locally AND triggers the sync to the user's cloud document
-        saveProjects(projects); 
 
-        // Initial empty data for the card
-        const initialData = { 
-            installment: { projectName: projectName, totalAmount: 0, payments: [] },
-            expense: { projectName: projectName, payments: [] },
-            settings: { expenseMode: (selectedType === 'finance') }
-        };
-        await updateGlobalCard(newProject, initialData);
-        
+        if (window.showLoading) window.showLoading('Setting up project...');
+
+        // This saves locally AND triggers the sync to the user's cloud
+        // document. We WAIT for it (with a safety timeout) before leaving
+        // this page — otherwise the browser can cancel the in-flight write
+        // when we navigate to paytrack.html, and the new project silently
+        // never reaches other devices until something else re-syncs it.
+        const syncPromise = Promise.all([
+            withTimeout(saveProjects(projects)),
+            updateGlobalCard(newProject, {
+                installment: { projectName: projectName, totalAmount: 0, payments: [] },
+                expense: { projectName: projectName, payments: [] },
+                settings: { expenseMode: (selectedType === 'finance') }
+            })
+        ]);
+        await withTimeout(syncPromise, 5000);
+
         sessionStorage.setItem('currentProjectId', newProject.id);
         window.location.href = 'paytrack.html';
     }
@@ -645,6 +917,7 @@ window.removeEditImage = (index) => {
         const projectId = target.dataset.projectId;
 
         if (target.classList.contains('open-project-btn')) {
+            if (window.showLoading) window.showLoading('Opening project...');
             sessionStorage.setItem('currentProjectId', projectId);
             window.location.href = `paytrack.html`;
         }
@@ -666,11 +939,15 @@ window.removeEditImage = (index) => {
             localStorage.removeItem(`project_${projectToDeleteId}_installment`);
             localStorage.removeItem(`project_${projectToDeleteId}_expense`);
             localStorage.removeItem(`project_${projectToDeleteId}_settings`);
+            localStorage.removeItem(`project_${projectToDeleteId}_shortcuts`);
+            localStorage.removeItem(`project_${projectToDeleteId}_auto`);
+            localStorage.removeItem(`project_${projectToDeleteId}_visibility`);
             saveProjects(projects);
             renderProjects();
             passwordModal.classList.add('hidden');
             showNotification("Deleted", "error");
         } else {
+            if (window.hideLoading) window.hideLoading();
             passwordError.classList.remove('hidden');
         }
     });
@@ -702,10 +979,13 @@ importCardForm.addEventListener('submit', async (e) => {
     importBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
 
     const cardNum = importCardNumber.value.replace(/\s+/g, ''); // Clean spaces
-    const cardName = importCardName.value;
+    const cardName = importCardName.value.trim(); // Trim - trailing/leading spaces would break an exact-match lookup
 
     try {
-        const cloudCard = await fetchProjectByCard(cardNum, cardName);
+        const auth = await import('./auth.js').catch(() => {
+            throw new Error("You're offline — connect to the internet to import a card.");
+        });
+        const cloudCard = await auth.fetchProjectByCard(cardNum, cardName);
         const projectId = cloudCard.projectId;
         const projectData = cloudCard.fullData;
 
@@ -714,20 +994,27 @@ importCardForm.addEventListener('submit', async (e) => {
             throw new Error("This project is already on your dashboard.");
         }
 
-        // Save individual data parts
+        // Save individual data parts — includes shortcuts, scheduled
+        // auto-transactions, and the balance-visibility toggle, not just
+        // installment/expense/settings, so an imported card isn't missing data
+        // that only lived in those extra fields.
         if (projectData.installment) localStorage.setItem(`project_${projectId}_installment`, JSON.stringify(projectData.installment));
         if (projectData.expense) localStorage.setItem(`project_${projectId}_expense`, JSON.stringify(projectData.expense));
         if (projectData.settings) localStorage.setItem(`project_${projectId}_settings`, JSON.stringify(projectData.settings));
+        if (projectData.shortcuts) localStorage.setItem(`project_${projectId}_shortcuts`, JSON.stringify(projectData.shortcuts));
+        if (projectData.autoTransactions) localStorage.setItem(`project_${projectId}_auto`, JSON.stringify(projectData.autoTransactions));
+        if (projectData.visibility !== undefined && projectData.visibility !== null) {
+            localStorage.setItem(`project_${projectId}_visibility`, projectData.visibility);
+        }
 
         // CRITICAL FIX: Ensure cardNumber is included here
-        const importingUsername = localStorage.getItem('paytrackUsername') || null;
         const newProjectEntry = {
             id: projectId,
             displayId: generateNextDisplayId(localProjects),
             name: cloudCard.originalName,
             type: projectData.settings?.expenseMode ? 'finance' : 'installment',
             cardNumber: cardNum, // <--- THIS MUST BE HERE
-            importedFrom: cloudCard.ownerUsername || importingUsername || null
+            importedFrom: cloudCard.ownerUsername || null
         };
 
         localProjects.push(newProjectEntry);
@@ -741,6 +1028,8 @@ importCardForm.addEventListener('submit', async (e) => {
         tabCreate.click();
         // Close the add panel after a successful import
         document.getElementById('addProjectPanel').classList.add('hidden');
+        document.getElementById('addProjectPanel').classList.remove('flex');
+        document.body.style.overflow = 'auto';
         updateNavActive(null);
     } catch (error) {
         showNotification(error.message, "error");

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="capacitor.js"></script>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>PayTrack - Settings</title>
@@ -10,6 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link href="dashboard.css" rel="stylesheet"/>
   <link href="settings.css" rel="stylesheet"/>
+  <script src="net-status.js"></script>
+  <script src="sw-register.js"></script>
+  <script src="app-promo.js"></script>
 </head>
 <body class="min-h-screen">
 
@@ -30,7 +34,7 @@
         </div>
 
         <!-- Right Section: Back to Home Button -->
-        <button aria-label="Back to Dashboard" class="settings-back-home-btn" onclick="window.location.href='dashboard.html'">
+        <button aria-label="Back to Dashboard" class="settings-back-home-btn" data-loading="Loading dashboard..." onclick="window.location.href='dashboard.html'">
             <i class="fas fa-home"></i>
         </button>
         
@@ -68,7 +72,7 @@
                   <p class="text-sm text-gray-500 mt-2 font-mono">Card: <span id="profileCardNumber"></span></p>
               </div>
               <div class="flex-shrink-0">
-                  <button id="logoutBtn" class="btn-danger text-white font-semibold py-2 px-6 rounded-lg flex items-center justify-center gap-2">
+                  <button id="logoutBtn" data-no-loading class="btn-danger text-white font-semibold py-2 px-6 rounded-lg flex items-center justify-center gap-2">
     <span id="logoutBtnText">Logout</span>
     <i id="logoutSpinner" class="fas fa-spinner fa-spin hidden"></i>
 </button>
@@ -100,27 +104,50 @@
           <div class="mt-6 pt-6 border-t">
               <h4 class="font-semibold text-md text-gray-800 mb-3" data-translate-key="themeCreator">Theme Creator</h4>
               <div id="customColorContainer" class="p-4 rounded-lg custom-color-container space-y-4">
-                  <div class="flex flex-col sm:flex-row gap-4 items-center">
-                      <div class="color-preview" id="colorPreview1"></div>
-                      <div class="relative flex-grow w-full">
-                         <i class="fas fa-hashtag absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                         <input id="customColorInput1" class="w-full pl-8 pr-4 py-2 border rounded-lg" placeholder="Color 1 (e.g., 1a2b3c)" type="text" maxlength="6"/>
+
+                  <!-- Editing banner -->
+                  <div id="editingThemeBanner" class="hidden bg-blue-50 border border-blue-200 text-blue-700 text-sm font-semibold px-3 py-2 rounded-lg flex items-center justify-between">
+                      <span><i class="fas fa-pencil mr-2"></i>Editing "<span id="editingThemeName"></span>"</span>
+                      <button type="button" id="cancelEditThemeBtn" class="text-blue-500 hover:text-blue-800 text-xs underline">Cancel</button>
+                  </div>
+
+                  <!-- Theme Name -->
+                  <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Theme Name</label>
+                      <input id="customThemeName" type="text" maxlength="24" placeholder="e.g., 'Sunset Vibes'" class="w-full px-4 py-2 border rounded-lg"/>
+                  </div>
+
+                  <!-- Type Selector -->
+                  <div class="flex gap-2" id="themeTypeSelector">
+                      <button type="button" data-type="solid" class="theme-type-btn flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-all">Solid Color</button>
+                      <button type="button" data-type="gradient" class="theme-type-btn flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-all">Gradient</button>
+                      <button type="button" data-type="image" class="theme-type-btn flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-all">Image</button>
+                  </div>
+
+                  <!-- Color 1 -->
+                  <div id="colorField1">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Color <span id="color1Label">1</span></label>
+                      <div class="flex gap-2 items-center">
+                         <input type="color" id="colorPicker1" value="#764ba2" class="w-12 h-12 p-0 border rounded-lg cursor-pointer shrink-0"/>
+                         <div class="color-preview" id="colorPreview1"></div>
+                         <div class="relative flex-grow w-full">
+                            <input id="customColorInput1" class="w-full pl-4 pr-4 py-2 border rounded-lg" placeholder="#764ba2, rgb(118,75,162), or 'purple'" type="text"/>
+                         </div>
                       </div>
+                      <p id="color1Error" class="hidden text-red-500 text-xs mt-1">Not a valid color. Try a hex code, rgb(), rgba(), or a color name.</p>
                   </div>
-                  <div class="flex items-center">
-                    <label for="gradientToggle" class="relative inline-flex items-center cursor-pointer mr-3">
-                      <input type="checkbox" id="gradientToggle" class="sr-only peer">
-                      <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                    <span class="text-sm font-medium text-gray-700">Use Gradient</span>
-                  </div>
+
                   <div id="gradientOptions" class="gradient-options space-y-4">
-                      <div class="flex flex-col sm:flex-row gap-4 items-center">
-                          <div class="color-preview" id="colorPreview2"></div>
-                          <div class="relative flex-grow w-full">
-                             <i class="fas fa-hashtag absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                             <input id="customColorInput2" class="w-full pl-8 pr-4 py-2 border rounded-lg" placeholder="Color 2 (e.g., 9f8e7d)" type="text" maxlength="6"/>
+                      <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">Color 2</label>
+                          <div class="flex gap-2 items-center">
+                             <input type="color" id="colorPicker2" value="#667eea" class="w-12 h-12 p-0 border rounded-lg cursor-pointer shrink-0"/>
+                             <div class="color-preview" id="colorPreview2"></div>
+                             <div class="relative flex-grow w-full">
+                                <input id="customColorInput2" class="w-full pl-4 pr-4 py-2 border rounded-lg" placeholder="#667eea, rgb(102,126,234), or 'blue'" type="text"/>
+                             </div>
                           </div>
+                          <p id="color2Error" class="hidden text-red-500 text-xs mt-1">Not a valid color. Try a hex code, rgb(), rgba(), or a color name.</p>
                       </div>
                       <div>
                         <label for="gradientDirection" class="block text-sm font-medium text-gray-700 mb-1">Direction</label>
@@ -134,9 +161,32 @@
                         </select>
                       </div>
                   </div>
+
+                  <!-- Image background -->
+                  <div id="imageThemeOptions" class="hidden space-y-3">
+                      <input type="file" id="themeImageInput" accept="image/*" class="hidden"/>
+                      <button type="button" id="chooseThemeImageBtn" class="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors">
+                          <i class="fas fa-image mr-2"></i> Choose Background Image
+                      </button>
+                      <div id="themeImagePreviewWrap" class="hidden relative">
+                          <img id="themeImagePreview" class="w-full h-32 object-cover rounded-xl border" alt="Theme background preview"/>
+                          <button type="button" id="removeThemeImageBtn" class="absolute top-2 right-2 bg-black/60 text-white w-7 h-7 rounded-full flex items-center justify-center">
+                              <i class="fas fa-times"></i>
+                          </button>
+                      </div>
+                  </div>
+
+                  <!-- Live full preview -->
+                  <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Preview</label>
+                      <div id="themeFullPreview" class="w-full h-20 rounded-xl border flex items-center justify-center font-bold text-sm shadow-inner transition-all" style="background: linear-gradient(to right, #764ba2, #667eea); color: #ffffff;">
+                          Sample Header Text
+                      </div>
+                  </div>
+
                   <div class="flex flex-col sm:flex-row gap-4 pt-4 border-t">
-                    <button id="applyCustomColorBtn" class="flex-1 btn-secondary text-white font-semibold py-2 px-6 rounded-lg">Preview</button>
-                    <button id="saveThemeBtn" class="flex-1 btn-primary text-white font-semibold py-2 px-6 rounded-lg hidden">Save Current Theme</button>
+                    <button id="applyCustomColorBtn" class="flex-1 btn-secondary text-white font-semibold py-2 px-6 rounded-lg">Preview on Page</button>
+                    <button id="saveThemeBtn" class="flex-1 btn-primary text-white font-semibold py-2 px-6 rounded-lg">Save Current Theme</button>
                   </div>
               </div>
           </div>
@@ -268,12 +318,189 @@
         </div>
 
         <!-- Submit Button -->
-        <button id="submitFeedbackBtn" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95">
+        <button id="submitFeedbackBtn" data-no-loading class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95">
             <span id="feedbackBtnText">Submit Feedback</span>
             <i id="feedbackSpinner" class="fas fa-spinner fa-spin hidden"></i>
         </button>
     </div>
 </div>
+
+  <!-- Terms & Conditions / Privacy Section -->
+  <div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center pt-8 border-t">
+        <i class="fas fa-file-contract mr-3 text-slate-500"></i>
+        <span>Terms &amp; Conditions</span>
+    </h2>
+    <div class="p-5 border rounded-2xl bg-white/50 space-y-3">
+        <p class="text-xs text-gray-500">Effective / last updated: <span id="termsLastUpdated">1 January 2026</span></p>
+        <p class="text-sm text-gray-700">By downloading, installing, or using PayTrack ("the App"), you agree to this Privacy Policy and these Terms of Service. If you do not agree, please do not use the App.</p>
+
+        <h3 class="text-xs font-bold uppercase tracking-wide text-gray-500 pt-2">Privacy Policy</h3>
+
+        <details class="border rounded-lg p-3" open>
+            <summary class="font-semibold text-gray-800 cursor-pointer">What data PayTrack stores</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>Your income, expenses, installment plans, receipt images, and project settings are saved on your device first, using your device's local storage. The app works fully offline using this local copy.</p>
+                <p>If you create an account or sign in with Google, that same data is also copied to a secure cloud database (Google Firebase) under your account, so it can be restored if you reinstall the app or open it on another device. If you never create an account, none of your project data leaves your device.</p>
+                <p>When you share a project using a card number, the project data becomes accessible to anyone you give that card number to — treat it like a password.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Account information</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>If you register with a username, we store that username, your email or phone number (if provided), and a securely hashed version of your PIN — never the PIN itself — so we can verify it's you when you log in.</p>
+                <p>If you sign in with Google, we receive your Google account email and display name, used only to create and identify your PayTrack account.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">PIN, biometrics &amp; security</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>Your app-lock PIN is stored only on your device to control access to the app. It is never transmitted anywhere in that form.</p>
+                <p>Fingerprint or Face ID login is handled entirely by your device's own operating system. PayTrack never receives, stores, or transmits your biometric data — your device simply tells the app "yes" or "no".</p>
+                <p>We use reasonable technical and organizational measures (including encrypted transmission and access-controlled cloud storage) to protect your data, but no method of electronic storage or transmission is 100% secure, and we cannot guarantee absolute security.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Receipt scanning (OCR)</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>When you scan a receipt, the image is read directly on your device to pull out the amount, date, and bank details — it is not uploaded to any server for this purpose. The receipt image is only stored if you save it as part of an income/expense record, following the same local/cloud rules described above.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Feedback you submit</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>Feedback text, star ratings, and any screenshots you attach through the Feedback &amp; Support section above are sent to us to help fix bugs and improve the app.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">App permissions we request</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p><strong>Camera:</strong> only used when you choose to scan a receipt; not accessed in the background.</p>
+                <p><strong>Photos / storage:</strong> used to attach a receipt image to a record and to save files you export, like Excel reports.</p>
+                <p><strong>Fingerprint / biometric hardware:</strong> used only to unlock the app if you turn this on; we never receive the biometric data itself.</p>
+                <p><strong>Internet &amp; network state:</strong> used to sync your data to your account and show whether you're online, if you've created an account.</p>
+                <p>PayTrack does not access your contacts, location, microphone, call logs, or SMS.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Third parties &amp; advertising</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>We do not sell your data, and we do not show ads or share your data with advertisers or data brokers. The only third party involved is Google Firebase, which we use purely as our cloud database, authentication and crash/feedback backend — governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" class="text-blue-600 underline">Google's Privacy Policy</a>. Firebase may store data on servers located outside your own country; Google maintains its own safeguards for this.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Data retention</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>Local data stays on your device until you delete it yourself (by removing a project, clearing the app's storage, or uninstalling the app). Cloud data tied to your account is kept until you delete that data or ask us to delete your account, after which it is removed from our active systems within a reasonable time.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Your choices &amp; rights</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>You can use PayTrack entirely offline without ever creating an account, in which case nothing is sent to us. You can delete your local data at any time by removing a project or clearing the app's storage.</p>
+                <p>Depending on where you live, you may have the right to request access to, correction of, or deletion of your cloud account data, or to ask us what we hold about you. To exercise any of these, or to delete your cloud account entirely, contact us using the details below — we'll respond within a reasonable time.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Children's privacy</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>PayTrack is not directed at, or intended for use by, children under 13 (or the minimum age required in your country), and we do not knowingly collect data from children under that age. If you're a parent or guardian and believe your child has provided us with data, contact us and we'll delete it.</p>
+            </div>
+        </details>
+
+        <h3 class="text-xs font-bold uppercase tracking-wide text-gray-500 pt-4 border-t mt-2">Terms of Service</h3>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Eligibility</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>You must be at least 13 years old (or the minimum age of digital consent in your country) to use PayTrack. By using the App, you confirm that you meet this requirement.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Your account &amp; responsibilities</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>You're responsible for keeping your PIN, biometric access, and any card numbers you share private, and for all activity that happens under your account. Tell us right away if you suspect unauthorized access. You agree to provide accurate information when creating an account.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Acceptable use</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>You agree not to: use the App for any unlawful purpose; attempt to reverse-engineer, decompile, or tamper with the App beyond what's permitted by law; interfere with or disrupt the App or its cloud services; or use the App to store or transmit content that is illegal, abusive, or infringes someone else's rights.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Your content</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>You own the financial data, receipts, and other content you enter into PayTrack. By syncing it to the cloud, you give us permission to store, process, and transmit it solely to provide the App's features (like backup and multi-device sync) — we don't use your content for any other purpose.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Intellectual property</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>The App itself — its code, design, logo, and branding — is owned by us and protected by copyright and other intellectual property laws. We grant you a limited, personal, non-exclusive, non-transferable license to use the App on your own devices for its intended purpose. You may not copy, resell, or redistribute the App itself.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Not financial advice</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>PayTrack is a personal record-keeping and calculation tool. It does not provide financial, investment, tax, or legal advice, and totals, reminders, or bank/receipt detection may occasionally be inaccurate (for example, due to OCR misreads). Always verify important figures yourself before making financial decisions based on them.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Disclaimer of warranties &amp; limitation of liability</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>The App is provided "as is" and "as available", without warranties of any kind, either express or implied, including fitness for a particular purpose or uninterrupted/error-free operation.</p>
+                <p>To the maximum extent permitted by law, we are not liable for any indirect, incidental, or consequential damages — including loss of data or financial loss — arising from your use of, or inability to use, the App. Nothing in these Terms limits liability that cannot legally be limited.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Termination</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>You may stop using the App at any time by uninstalling it or deleting your account. We may suspend or terminate access to cloud features for accounts that violate these Terms or misuse the service (for example, abusing the card-sharing feature). Your locally stored data is unaffected by any cloud-side suspension.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Governing law</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>These Terms are governed by the laws of <span class="font-semibold">[REPLACE_WITH_YOUR_COUNTRY_OR_STATE]</span>, without regard to its conflict-of-law principles. Any dispute will first be attempted to be resolved informally by contacting us; if that isn't possible, it will be subject to the courts of that jurisdiction.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Changes to the App &amp; these terms</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>We may update the App, add or remove features, and update this page from time to time. Material changes to these terms will update the "Effective / last updated" date above; continued use of the App after a change means you accept the updated terms.</p>
+            </div>
+        </details>
+
+        <details class="border rounded-lg p-3">
+            <summary class="font-semibold text-gray-800 cursor-pointer">Severability &amp; entire agreement</summary>
+            <div class="mt-2 space-y-2 text-sm text-gray-600">
+                <p>If any part of these Terms is found unenforceable, the rest remains in full effect. These Terms, together with our Privacy Policy above, are the entire agreement between you and us regarding the App.</p>
+            </div>
+        </details>
+
+        <p class="text-sm text-gray-600 pt-2">Questions about your data or these terms? Contact us at <a href="mailto:REPLACE_WITH_YOUR_SUPPORT_EMAIL@example.com" class="text-blue-600 underline">REPLACE_WITH_YOUR_SUPPORT_EMAIL@example.com</a>.</p>
+    </div>
+  </div>
+
   <!-- Theme Details Modal -->
   <div id="themeDetailsModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 glass-effect animate-slide-in">
@@ -308,6 +535,8 @@
     </div>
   </div>
 
+  <script src="loader.js"></script>
+  <script src="theme-utils.js"></script>
   <script src="translations.js"></script>
 <script type="module" src="settings.js"></script>
 </body>

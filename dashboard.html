@@ -9,13 +9,15 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link href="dashboard.css" rel="stylesheet">
+  <script src="net-status.js"></script>
+  <script src="sw-register.js"></script>
 </head>
 <body class="min-h-screen">
 
  <div class="container mx-auto px-4 max-w-4xl">
   <!-- PREMIMUM COMPACT GLASS HEADER -->
   <header class="header-glass sticky top-0 z-[100] mb-6">
-    <div class="flex items-center justify-between py-2.5 px-4">
+    <div class="dash-header-row flex items-center justify-between py-2.5 px-4">
       
       <!-- Left: Logo & App Name -->
       <div class="flex items-center gap-3">
@@ -26,6 +28,13 @@
           <span class="text-white font-black text-xl tracking-tighter uppercase drop-shadow-sm">PayTrack</span>
           <span class="text-white/80 text-[9px] font-black uppercase tracking-widest" data-translate-key="dashboardTitle">Project Dashboard</span>
         </div>
+      </div>
+
+      <!-- Cloud/offline status pill: quiet by default, speaks up only when
+           offline or actively syncing so the person always knows why the
+           app might be behaving differently. -->
+      <div id="cloudStatus" class="dash-cloud-status opacity-0 transition-opacity">
+        <i class="fas fa-cloud"></i> <span id="cloudStatusText">Synced</span>
       </div>
 
       <!-- Right: Settings Button -->
@@ -56,7 +65,8 @@
     </div>
 
     <!-- Search and Filter Projects (hidden by default, toggled by nav Find button) -->
-    <div id="findProjectPanel" class="glass-effect rounded-2xl p-6 mb-8 hidden">
+    <div id="findProjectPanel" class="fixed inset-0 z-[250] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+     <div class="glass-effect rounded-2xl p-6 w-full max-w-lg my-auto">
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-2xl font-bold text-gray-800 flex items-center">
           <i class="fas fa-search mr-3 text-green-500"></i>
@@ -68,13 +78,13 @@
       </div>
       
       <!-- Search Input -->
-      <div class="relative mb-6">
+      <div class="relative mb-3">
         <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" id="projectSearchInput" type="text" placeholder="Search by Name or ID (e.g., P1)..."/>
         <i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
       </div>
 
       <!-- Classification Filters -->
-      <div class="flex flex-wrap gap-2" id="projectFilters">
+      <div class="flex flex-wrap gap-2 mb-4" id="projectFilters">
         <button class="filter-btn active px-4 py-2 rounded-full text-sm font-semibold transition-all bg-blue-600 text-white" data-filter="all">
           All
         </button>
@@ -85,10 +95,18 @@
           Finance Tracker
         </button>
       </div>
+
+      <!-- Live Search Status -->
+      <p id="searchResultsStatus" class="text-sm font-semibold text-gray-500 mb-2"></p>
+
+      <!-- Live Search Results -->
+      <div id="searchResultsContainer" class="space-y-2 max-h-72 overflow-y-auto"></div>
+     </div>
     </div>
 
     <!-- Create / Import Project Section (hidden by default, toggled by nav Add button) -->
-    <div id="addProjectPanel" class="glass-effect rounded-2xl p-6 mb-8 hidden">
+    <div id="addProjectPanel" class="fixed inset-0 z-[250] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+     <div class="glass-effect rounded-2xl p-6 w-full max-w-lg my-auto">
       <!-- Panel Header with close -->
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold text-gray-800 flex items-center">
@@ -110,7 +128,10 @@
 
       <!-- Form 1: Create New -->
       <form id="newProjectForm" class="flex flex-col sm:flex-row gap-4 items-center">
-        <input class="flex-grow w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" id="newProjectName" required type="text" data-placeholder-key="newProjectPlaceholder" placeholder="e.g., 'House Construction'"/>
+        <div class="flex-grow w-full">
+          <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" id="newProjectName" required type="text" data-placeholder-key="newProjectPlaceholder" placeholder="e.g., 'House Construction'"/>
+          <p id="newProjectNameError" class="hidden text-red-500 text-xs font-semibold mt-1 text-left">A project with this name already exists.</p>
+        </div>
         <select id="newProjectType" class="w-full sm:w-auto px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
             <option value="installment" data-translate-key="installmentTracker">Installment Tracker</option>
             <option value="finance" data-translate-key="financeTracker">Finance Manager</option>
@@ -138,6 +159,7 @@
             <span>Find & Import Project</span>
           </button>
       </form>
+     </div>
     </div>
 
     <!-- Project List -->
@@ -222,7 +244,7 @@
 
             <div class="flex gap-3 pt-4">
                 <button type="button" id="closeEditModal" class="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-xl">Cancel</button>
-                <button type="submit" id="saveEditBtn" class="flex-1 py-3 btn-primary text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2">
+                <button type="submit" id="saveEditBtn" data-no-loading class="flex-1 py-3 btn-primary text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2">
     <span id="saveEditBtnText">Save Changes</span>
     <i id="saveEditSpinner" class="fas fa-spinner fa-spin hidden"></i>
 </button>
@@ -291,6 +313,8 @@
 </div>
 
 
+  <script src="loader.js"></script>
+  <script src="theme-utils.js"></script>
   <script src="translations.js"></script>
   <!-- NOTE: type="module" is essential for top-level imports in dashboard.js -->
   <script type="module" src="dashboard.js"></script>

@@ -2,7 +2,6 @@
 import { db, doc, setDoc, getDoc, updateDoc, auth, googleProvider, signInWithPopup } from './firebase-config.js';
 import { onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 export async function submitFeedbackToCloud(feedbackData) {
     try {
@@ -72,19 +71,19 @@ export async function downloadUserData(username) {
     try {
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
-            const cloudData = userSnap.data().data;
+            const cloudData = userSnap.data().data; // Get the data from Firebase
             
-            // CRITICAL: Actually save the cloud projects to the new device's local storage
-            if (cloudData.projects) {
+            // CRITICAL: Actually save it to the new phone's local storage
+            if (cloudData && cloudData.projects) {
                 localStorage.setItem('allTrackerProjects', JSON.stringify(cloudData.projects));
             }
-            if (cloudData.globalSettings) {
+            if (cloudData && cloudData.globalSettings) {
                 localStorage.setItem('dashboardGlobalSettings', JSON.stringify(cloudData.globalSettings));
             }
             return true;
         }
     } catch (e) {
-        console.error("Sync Error:", e);
+        console.error("Download Error:", e);
     }
     return false;
 }
@@ -120,7 +119,9 @@ export async function updateGlobalCard(project, projectData) {
     };
 
     try {
-        await setDoc(cardRef, payload); 
+        // merge: true is important here — it stops a routine data sync from wiping out
+        // other fields on the card document that aren't part of this payload.
+        await setDoc(cardRef, payload, { merge: true });
     } catch (e) {
         console.error("🔥 CLOUD ERROR:", e);
         if (e.message.includes('too large')) {
@@ -136,7 +137,9 @@ export async function fetchProjectByCard(cardNumberStr, cardNameStr) {
     const docSnap = await getDoc(cardRef);
     if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.cardName === cleanName) return data;
+        if (data.cardName === cleanName) {
+            return data;
+        }
         else throw new Error("Card Name does not match.");
     } else throw new Error("Card Number not found.");
 }
@@ -175,14 +178,13 @@ export async function handleGoogleAuth() {
                 data: { projects: [], settings: {}, globalSettings: {} }
             });
         } else {
-            // Existing User: Check Device Limit
+            // Existing user: record this device if it isn't already known.
+            // No cap on how many devices can be active at once — the account
+            // can be logged into from as many devices as the person wants.
             const userData = userSnap.data();
             let activeDevices = userData.activeDevices || [];
 
             if (!activeDevices.includes(deviceId)) {
-                if (activeDevices.length >= 2) {
-                    throw new Error("This account is already active on 2 other devices.");
-                }
                 activeDevices.push(deviceId);
                 await updateDoc(userRef, { activeDevices: activeDevices });
             }
@@ -209,6 +211,19 @@ export async function registerUser(username, email, phone, pin) {
     return true;
 }
 
+// Updates the hashed PIN stored on the user's cloud account document, so
+// the same PIN the person just set locally (lock screen / project delete)
+// also works for logging into their account from login.html on any
+// device. No-op if they don't have a cloud account on this device yet —
+// the local PIN change still applies either way.
+export async function updateAccountPin(newPin) {
+    const username = localStorage.getItem('paytrackUsername');
+    if (!username) return;
+    const hashedPin = await hashPin(newPin);
+    const userRef = doc(db, "users", username);
+    await updateDoc(userRef, { pin: hashedPin });
+}
+
 export async function loginUser(username, pin) {
     const userRef = doc(db, "users", username);
     const userSnap = await getDoc(userRef);
@@ -219,24 +234,18 @@ export async function loginUser(username, pin) {
     const hashedPin = await hashPin(pin);
     if (userData.pin !== hashedPin) throw new Error("Incorrect PIN.");
 
-    // FIX 2: Sign in anonymously to Firebase so the database allows the device to write/read
-    await signInAnonymously(auth);
-
-    // FIX 3: Device Management
+    // Record this device as active. No cap on the number of devices — the
+    // account can be logged into anywhere, on as many devices as wanted.
     const deviceId = getOrCreateDeviceId();
     let activeDevices = userData.activeDevices || [];
+
     if (!activeDevices.includes(deviceId)) {
-        if (activeDevices.length >= 2) {
-            throw new Error("Limit Reached: Logout from another device first.");
-        }
         activeDevices.push(deviceId);
         await updateDoc(userRef, { activeDevices: activeDevices });
     }
 
     localStorage.setItem('paytrackUserSession', 'true');
     localStorage.setItem('paytrackUsername', username);
-    
-    // CRITICAL: Pull all data from cloud immediately after login
     await downloadUserData(username);
     return true;
 }

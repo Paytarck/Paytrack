@@ -120,6 +120,61 @@ body.theme-custom .header-icon {
     background-color: #ef4444; /* Red on hover */
 }
 
+/* Edit button on saved theme swatches */
+.edit-theme-btn {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    z-index: 20;
+}
+
+.saved-theme-button:hover .edit-theme-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.edit-theme-btn:hover {
+    background-color: #3b82f6; /* Blue on hover */
+}
+
+/* Theme Creator: type selector pills */
+.theme-type-btn {
+    border-color: #e5e7eb;
+    color: #6b7280;
+    background: white;
+}
+
+.theme-type-btn.active {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: white;
+}
+
+body.theme-dark .theme-type-btn {
+    border-color: #4b5563;
+    background: #374151;
+    color: #d1d5db;
+}
+
+body.theme-dark .theme-type-btn.active {
+    border-color: #3b82f6;
+    background: #3b82f6;
+    color: white;
+}
+
 /* --- INPUT & TOGGLE ANIMATIONS --- */
 
 .custom-color-container {
@@ -250,18 +305,19 @@ header-glass {
 /* Logo Wrapper (Matches Dashboard) */
 .header-logo-wrapper {
     background: white;
-    width: 38px;
-    height: 38px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    padding: 4px;
 }
 
 .header-logo-img {
-    width: 90%;
-    height: 90%;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
 }
 
@@ -289,4 +345,57 @@ header-glass {
 /* Ensure the main content doesn't have a gap at the top now */
 .container {
     padding-top: 0 !important;
+}
+/* --- TERMS & CONDITIONS ACCORDION --- */
+#termsLastUpdated { font-weight: 600; }
+
+details > summary {
+    list-style: none;
+}
+details > summary::-webkit-details-marker {
+    display: none;
+}
+details > summary::after {
+    content: '\f078'; /* fa-chevron-down */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    float: right;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    transition: transform 0.2s ease;
+}
+details[open] > summary::after {
+    transform: rotate(180deg);
+}
+
+body.theme-dark details {
+    border-color: #4b5563;
+}
+body.theme-dark details summary {
+    color: #e5e7eb;
+}
+
+/* --- URDU TEXT DIRECTION (scoped, non-layout-breaking) ---
+   We deliberately do NOT flip document.dir for Urdu (see translations.js).
+   Instead, right-align/RTL only plain text content so paragraphs and labels
+   read naturally, while flex rows, nav bars, and buttons keep their
+   original left-to-right structure and don't get mirrored/broken. */
+body.lang-ur p,
+body.lang-ur label,
+body.lang-ur h1,
+body.lang-ur h2,
+body.lang-ur h3,
+body.lang-ur li,
+body.lang-ur td,
+body.lang-ur th {
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: plain-text;
+}
+
+/* Numbers/amounts should stay left-to-right even in Urdu text so digits
+   don't get reordered. */
+body.lang-ur [id*="Words"],
+body.lang-ur input[type="number"] {
+    unicode-bidi: isolate;
 }
