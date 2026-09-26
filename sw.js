@@ -46,6 +46,9 @@ const APP_SHELL_URLS = [
     'settings.js',
     'settings.css',
     'lock.html',
+    'register.html',
+    'login.html',
+    'countries.js',
     'lock.js',
     'lock.css',
     'auth.js',
@@ -56,6 +59,7 @@ const APP_SHELL_URLS = [
     'net-status.js',
     'sw-register.js',
     'app-promo.js',
+    'share-intent.js',
     'Paytrack-icon.png',
 ];
 

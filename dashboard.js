@@ -1044,4 +1044,40 @@ importCardNumber.addEventListener('input', (e) => {
     let formattedValue = value.match(/.{1,4}/g)?.join(' ') || '';
     e.target.value = formattedValue.substring(0, 19);
 });
+
+// --- INCOMING SHARED RECEIPT (see share-intent.js) ---
+// Someone shared a receipt image into PayTrack from another app. Prompt
+// them to pick which project it belongs to; the existing "open project"
+// click handling on projectListContainer (above) then carries the pending
+// receipt through to paytrack.html automatically via sessionStorage.
+function checkPendingSharedReceipt() {
+    const hasPending = !!sessionStorage.getItem('paytrackPendingSharedReceipt');
+    let banner = document.getElementById('ptSharedReceiptBanner');
+
+    if (!hasPending) {
+        if (banner) banner.remove();
+        return;
+    }
+    if (banner) return; // already showing
+
+    banner = document.createElement('div');
+    banner.id = 'ptSharedReceiptBanner';
+    banner.style.cssText = 'position:sticky;top:0;z-index:9990;display:flex;align-items:center;gap:10px;' +
+        'background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:10px 14px;' +
+        'padding-top:calc(10px + env(safe-area-inset-top,0px));font-size:0.85rem;font-family:inherit;' +
+        'box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+    banner.innerHTML = `
+        <i class="fas fa-receipt"></i>
+        <span style="flex:1;">Tap a project below to scan this receipt into it.</span>
+        <button type="button" id="ptSharedReceiptCancel" style="border:none;background:rgba(255,255,255,0.2);color:#fff;border-radius:8px;padding:5px 10px;font-weight:700;font-size:0.78rem;cursor:pointer;">Cancel</button>
+    `;
+    document.body.prepend(banner);
+    document.getElementById('ptSharedReceiptCancel').addEventListener('click', () => {
+        sessionStorage.removeItem('paytrackPendingSharedReceipt');
+        banner.remove();
+    });
+}
+
+checkPendingSharedReceipt();
+window.addEventListener('paytrack:incoming-receipt', checkPendingSharedReceipt);
 });

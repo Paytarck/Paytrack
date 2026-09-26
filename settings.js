@@ -19,18 +19,6 @@ function scheduleBackgroundSync() {
         .catch(() => {});
 }
 
-// Retries a cloud PIN update that failed earlier (see handlePasswordUpdate
-// below) because the device was offline. Safe to call speculatively — it's
-// a no-op when there's nothing pending.
-function flushPendingAccountPin() {
-    const pendingPin = localStorage.getItem('pendingAccountPinSync');
-    if (!pendingPin) return;
-    import('./auth.js')
-        .then((auth) => auth.updateAccountPin(pendingPin))
-        .then(() => localStorage.removeItem('pendingAccountPinSync'))
-        .catch(() => {}); // still offline/failed — leave it queued for next time
-}
-
 // When Background Sync fires in the service worker, it messages every open
 // PayTrack tab so it can push any pending changes using the data and
 // Firebase SDK already available here.
@@ -38,20 +26,9 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data?.type === 'PAYTRACK_FLUSH_SYNC') {
             import('./auth.js').then(auth => auth.syncDataToCloud()).catch(() => {});
-            flushPendingAccountPin();
         }
     });
 }
-
-// Fallback for browsers that don't support Background Sync at all (notably
-// iOS): the moment the browser reports connectivity again, try to flush
-// right away instead of waiting on a sync event that will never come.
-window.addEventListener('online', flushPendingAccountPin);
-
-// Also try once on load — covers the case where the PIN change happened
-// offline, the tab was then closed, and the device reconnected before this
-// page was reopened (so no 'online' event fires while we're here to hear it).
-flushPendingAccountPin();
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONSTANTS ---
@@ -696,10 +673,12 @@ async function handleBiometricToggle() {
 
 
     // --- PIN LOGIC ---
-    // This one PIN is intentionally shared everywhere: unlocking the app
-    // (lock.html reads the same DELETE_PASSWORD_KEY), confirming a project
-    // deletion (dashboard.js reads it too), and — via updateAccountPin
-    // below — logging into this account from login.html on any device.
+    // This is the LOCAL DEVICE PIN only: it unlocks the app (lock.html reads
+    // the same DELETE_PASSWORD_KEY) and confirms a project/data deletion
+    // (dashboard.js and paytrack.js read it too). It is intentionally
+    // separate from your account PIN (set once at registration, used only
+    // to log into your account from login.html on another device) — changing
+    // one here never changes the other.
     function handlePasswordUpdate(event) {
         event.preventDefault();
         const current = currentPasswordInput.value;
@@ -711,38 +690,12 @@ async function handleBiometricToggle() {
         if (newP.length !== 4) return showNotification('PIN must be 4 digits.', 'error');
         if (newP !== confirmP) return showNotification('PINs do not match.', 'error');
 
-        // Applies immediately and locally first — the lock screen and project
+        // Applies immediately and locally — the lock screen and project/data
         // deletion already read straight from this same key, so they pick up
-        // the new PIN right away regardless of connectivity.
+        // the new PIN right away. This never touches your account PIN.
         localStorage.setItem(DELETE_PASSWORD_KEY, newP);
         passwordForm.reset();
-
-        const username = localStorage.getItem('paytrackUsername');
-        if (!username) {
-            // No cloud account on this device — the local PIN change is the
-            // whole story.
-            showNotification('PIN updated!', 'success');
-            return;
-        }
-
-        // Also push the same PIN to the cloud account so it works for
-        // logging in from login.html, on this device or any other.
-        import('./auth.js')
-            .then((auth) => auth.updateAccountPin(newP))
-            .then(() => {
-                localStorage.removeItem('pendingAccountPinSync');
-                showNotification('PIN updated everywhere!', 'success');
-            })
-            .catch((e) => {
-                console.error('Account PIN sync failed:', e);
-                // Remember the PIN that still needs to reach the cloud so the
-                // retry paths below (flush message, 'online' event, or next
-                // page load) can actually finish the job later, instead of
-                // just promising to and never following through.
-                localStorage.setItem('pendingAccountPinSync', newP);
-                scheduleBackgroundSync();
-                showNotification("PIN updated on this device — will sync to your account when you're back online", 'success');
-            });
+        showNotification('App PIN updated!', 'success');
     }
 
     // --- INITIALIZE PAGE ---

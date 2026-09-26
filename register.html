@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="capacitor.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="icon" type="image/png" href="Paytrack-icon.png">
@@ -8,6 +9,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <script src="net-status.js"></script>
+    <script src="sw-register.js"></script>
+    <script src="app-promo.js"></script>
+    <script src="share-intent.js"></script>
 </head>
 <body class="p-4 bg-gradient-to-br from-blue-900 to-blue-600 min-h-screen flex items-center justify-center font-[Inter]">
 
@@ -79,19 +84,38 @@
         </div>
     </div>
 
-    <script type="module">
-        import { registerUser, handleGoogleAuth } from './auth.js';
-        import { countryCodes } from './countries.js';
-
-        // 1. Populate Country Codes
+    <script>
+    // auth.js (and its own chain up to the Firebase SDK on Google's CDN) is
+    // loaded dynamically rather than as a static `import`, the same way
+    // every other page in this app does it. A static import is all-or-
+    // nothing: if that chain fails to load even once — e.g. this is the
+    // first time register.html has ever been opened offline, before the
+    // service worker has had a chance to cache it — the whole module dies
+    // silently and NOTHING on this page would work: not the form, not the
+    // Google button, not even the country-code dropdown. Dynamic import()
+    // keeps the page itself alive either way, and lets us show an honest
+    // "you're offline" message instead of a dead, unresponsive form.
+    // countries.js is small and has no external dependencies of its own,
+    // but is loaded the same way for consistency and so one missing file
+    // can't take the other down with it.
+    (async function () {
+        // 1. Populate Country Codes (falls back to a small manual list if
+        // countries.js hasn't loaded yet — the account's phone number can
+        // always be edited later, this just shouldn't leave the field empty)
         const codeSelect = document.getElementById('countryCodeSelect');
-        const defaultCode = "+92"; 
-
+        const defaultCode = "+92";
+        let countryCodes = [{ code: '+92', name: 'Pakistan' }, { code: '+1', name: 'United States' }, { code: '+44', name: 'United Kingdom' }];
+        try {
+            const countriesModule = await import('./countries.js');
+            countryCodes = countriesModule.countryCodes;
+        } catch (e) {
+            console.warn('Could not load full country list, using a short fallback:', e);
+        }
         countryCodes.forEach(country => {
             const option = document.createElement('option');
             option.value = country.code;
             option.textContent = `${country.code} (${country.name})`;
-            if(country.code === defaultCode) option.selected = true;
+            if (country.code === defaultCode) option.selected = true;
             codeSelect.appendChild(option);
         });
 
@@ -120,13 +144,20 @@
             if (username.length < 3) { showError("Username too short."); setLoading(false); return; }
             if (pin.length !== 4) { showError("PIN must be 4 digits."); setLoading(false); return; }
 
+            if (!navigator.onLine) {
+                showError("You're offline — creating an account needs an internet connection. Your local data and app PIN work fine offline; only account creation itself needs connectivity.");
+                setLoading(false);
+                return;
+            }
+
             const fullPhone = countryCode + phoneNum;
 
             try {
-                await registerUser(username, email, fullPhone, pin);
+                const auth = await import('./auth.js');
+                await auth.registerUser(username, email, fullPhone, pin);
                 window.location.href = 'login.html?registered=true';
             } catch (err) {
-                showError(err.message);
+                showError(err.message || "Couldn't create your account. Check your connection and try again.");
                 setLoading(false);
             }
         });
@@ -134,17 +165,24 @@
         // 4. Google Registration
         googleRegBtn.addEventListener('click', async () => {
             hideError();
+
+            if (!navigator.onLine) {
+                showError("You're offline — signing up needs an internet connection.");
+                return;
+            }
+
             googleRegBtn.disabled = true;
             googleRegBtn.classList.add('opacity-50');
 
             try {
-                // This function in auth.js handles checking if user exists, 
+                // This function in auth.js handles checking if user exists,
                 // and CREATES the DB record if they don't.
-                await handleGoogleAuth();
+                const auth = await import('./auth.js');
+                await auth.handleGoogleAuth();
                 window.location.href = 'dashboard.html';
             } catch (err) {
                 console.error(err);
-                showError("Google Sign-Up failed. " + err.message);
+                showError("Google Sign-Up failed. " + (err.message || 'Please try again.'));
                 googleRegBtn.disabled = false;
                 googleRegBtn.classList.remove('opacity-50');
             }
@@ -169,6 +207,7 @@
                 spinner.classList.add('hidden');
             }
         }
+    })();
     </script>
 </body>
 </html>

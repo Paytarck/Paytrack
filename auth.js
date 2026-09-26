@@ -3,14 +3,63 @@ import { db, doc, setDoc, getDoc, updateDoc, auth, googleProvider, signInWithPop
 import { onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// --- OFFLINE-HANG PROTECTION ---
+// The Firestore Web SDK has a well-documented behavior where an awaited
+// write (setDoc/updateDoc/addDoc) never resolves OR rejects while the
+// device is offline — the write is still applied to Firestore's local
+// cache and will sync to the server automatically once connectivity
+// returns, but the Promise itself just hangs forever instead of failing
+// fast. (https://github.com/firebase/firebase-js-sdk/issues/8657)
+// getDoc() is unaffected by this and needs no wrapping.
+//
+// Racing a timeout against the write (below) stops OUR code from waiting
+// forever, but the underlying network request Firestore started is still
+// left running in the background indefinitely — anything else that tracks
+// raw network activity (a global loading indicator, dev tools, etc.) can
+// still look "stuck" even after our own code has moved on. So both helpers
+// below check navigator.onLine FIRST and skip starting the write at all
+// when we already know we're offline — the write function passed in is
+// only invoked once we're reasonably sure it has a network to try.
+
+// For best-effort background syncs where the caller already treats
+// failure as "fine, we'll catch up later": if offline, don't even start
+// the write. If online, give up waiting after `ms` and let the caller
+// carry on as if it finished — the write is already safely queued in
+// Firestore's local cache and will reach the server on its own.
+//
+// `makeWrite` is a function that RETURNS the write promise (e.g.
+// `() => setDoc(ref, data)`) rather than the promise itself, so we can
+// avoid ever calling it while offline.
+function withTimeout(makeWrite, ms = 6000) {
+    if (!navigator.onLine) return Promise.resolve();
+    return Promise.race([
+        Promise.resolve(makeWrite()),
+        new Promise(resolve => setTimeout(resolve, ms))
+    ]);
+}
+
+// For writes the caller genuinely needs an honest outcome for (creating an
+// account, logging in, changing a PIN): if offline, reject immediately
+// with a clear message instead of even trying. If online but the write
+// doesn't settle within `ms`, reject with a timeout error — either way the
+// caller's existing "offline / failed" handling actually runs instead of
+// hanging forever with no feedback at all.
+function withTimeoutStrict(makeWrite, ms = 8000) {
+    if (!navigator.onLine) return Promise.reject(new Error("You're offline. Check your internet connection."));
+    return Promise.race([
+        Promise.resolve(makeWrite()),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out. Check your internet connection.')), ms))
+    ]);
+}
+
 export async function submitFeedbackToCloud(feedbackData) {
     try {
         const feedbackRef = collection(db, "feedback");
-        await addDoc(feedbackRef, {
+        await withTimeoutStrict(() => addDoc(feedbackRef, {
             ...feedbackData,
             timestamp: new Date().toISOString(),
             status: "unread" // Useful for you to track which ones you've seen
-        });
+        }));
         return true;
     } catch (e) {
         console.error("Feedback Error:", e);
@@ -121,7 +170,7 @@ export async function updateGlobalCard(project, projectData) {
     try {
         // merge: true is important here — it stops a routine data sync from wiping out
         // other fields on the card document that aren't part of this payload.
-        await setDoc(cardRef, payload, { merge: true });
+        await withTimeout(() => setDoc(cardRef, payload, { merge: true }));
     } catch (e) {
         console.error("🔥 CLOUD ERROR:", e);
         if (e.message.includes('too large')) {
@@ -171,12 +220,12 @@ export async function handleGoogleAuth() {
 
         if (!userSnap.exists()) {
             // New User: Register with this device
-            await setDoc(userRef, {
+            await withTimeoutStrict(() => setDoc(userRef, {
                 username: username, email: user.email, displayName: user.displayName,
                 authProvider: 'google', createdAt: new Date().toISOString(),
                 activeDevices: [deviceId], // Add first device
                 data: { projects: [], settings: {}, globalSettings: {} }
-            });
+            }));
         } else {
             // Existing user: record this device if it isn't already known.
             // No cap on how many devices can be active at once — the account
@@ -186,7 +235,7 @@ export async function handleGoogleAuth() {
 
             if (!activeDevices.includes(deviceId)) {
                 activeDevices.push(deviceId);
-                await updateDoc(userRef, { activeDevices: activeDevices });
+                await withTimeoutStrict(() => updateDoc(userRef, { activeDevices: activeDevices }));
             }
         }
 
@@ -202,26 +251,29 @@ export async function registerUser(username, email, phone, pin) {
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) throw new Error("Username taken.");
     const hashedPin = await hashPin(pin);
-    await setDoc(userRef, {
+    await withTimeoutStrict(() => setDoc(userRef, {
         username, email, phone, pin: hashedPin, authProvider: 'local', createdAt: new Date().toISOString(),
         data: { projects: [], settings: {}, globalSettings: {} }
-    });
+    }));
     localStorage.setItem('paytrackUserSession', 'true');
     localStorage.setItem('paytrackUsername', username);
     return true;
 }
 
-// Updates the hashed PIN stored on the user's cloud account document, so
-// the same PIN the person just set locally (lock screen / project delete)
-// also works for logging into their account from login.html on any
-// device. No-op if they don't have a cloud account on this device yet —
-// the local PIN change still applies either way.
+// Changes the PIN on the CLOUD ACCOUNT itself — the one used to log into
+// this account from login.html on another device. This is intentionally
+// separate from the local device PIN (settings.js's "Change PIN" only
+// touches dashboardDeletePassword, never this). Not currently called from
+// anywhere in this app — kept here for a future dedicated "change account
+// PIN" screen. If you build one, remember to prompt for the CURRENT
+// account PIN and verify it (e.g. re-run loginUser) before calling this,
+// the same way handlePasswordUpdate verifies the current local PIN.
 export async function updateAccountPin(newPin) {
     const username = localStorage.getItem('paytrackUsername');
     if (!username) return;
     const hashedPin = await hashPin(newPin);
     const userRef = doc(db, "users", username);
-    await updateDoc(userRef, { pin: hashedPin });
+    await withTimeoutStrict(() => updateDoc(userRef, { pin: hashedPin }));
 }
 
 export async function loginUser(username, pin) {
@@ -241,7 +293,7 @@ export async function loginUser(username, pin) {
 
     if (!activeDevices.includes(deviceId)) {
         activeDevices.push(deviceId);
-        await updateDoc(userRef, { activeDevices: activeDevices });
+        await withTimeoutStrict(() => updateDoc(userRef, { activeDevices: activeDevices }));
     }
 
     localStorage.setItem('paytrackUserSession', 'true');
@@ -261,11 +313,11 @@ export async function syncDataToCloud() {
     try {
         // WE REMOVED projectDetails FROM HERE. 
         // We only sync the list of projects and the main settings.
-        await updateDoc(userRef, { 
+        await withTimeout(() => updateDoc(userRef, { 
             "data.projects": localProjects, 
             "data.globalSettings": globalSettings, 
             lastSynced: new Date().toISOString() 
-        });
+        }));
     } catch (error) { console.error("Sync failed:", error); }
 }
 
@@ -303,7 +355,7 @@ export async function logoutUser() {
             if (userSnap.exists()) {
                 const currentDevices = userSnap.data().activeDevices || [];
                 const updatedDevices = currentDevices.filter(id => id !== deviceId);
-                await updateDoc(userRef, { activeDevices: updatedDevices });
+                await withTimeout(() => updateDoc(userRef, { activeDevices: updatedDevices }));
                 console.log("Device removed from cloud.");
             }
         } catch (e) {
@@ -311,8 +363,13 @@ export async function logoutUser() {
         }
     }
 
-    // 2. Clear ALL local data
-    const keysToKeep = ['paytrackDeviceId']; // Keep DeviceID so we don't generate new ones every time
+    // 2. Clear ALL local data EXCEPT device-level settings that have nothing
+    // to do with which account is logged in. In particular, the local
+    // app-lock PIN (dashboardDeletePassword) is created once, the very
+    // first time this device is ever set up, and is intentionally
+    // independent of any account — logging out (or into a different
+    // account later) must never force it to be created again.
+    const keysToKeep = ['paytrackDeviceId', 'dashboardDeletePassword'];
     const allKeys = Object.keys(localStorage);
     
     allKeys.forEach(key => {
@@ -332,7 +389,7 @@ export async function clearAllDeviceSessions(username) {
     const userRef = doc(db, "users", username);
     try {
         // Force the activeDevices array to be empty in the cloud
-        await updateDoc(userRef, { activeDevices: [] });
+        await withTimeoutStrict(() => updateDoc(userRef, { activeDevices: [] }));
         console.log("All device sessions cleared in cloud.");
         return true;
     } catch (e) {
