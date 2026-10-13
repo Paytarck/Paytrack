@@ -60,19 +60,6 @@
             </button>
         </form>
 
-        <!-- Divider -->
-        <div class="relative flex py-5 items-center">
-            <div class="flex-grow border-t border-gray-300"></div>
-            <span class="flex-shrink-0 mx-4 text-gray-400 text-sm">Or</span>
-            <div class="flex-grow border-t border-gray-300"></div>
-        </div>
-
-        <!-- Google Signup Button -->
-        <button id="googleRegBtn" class="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 rounded-lg shadow-sm flex items-center justify-center gap-3 transition-colors">
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google">
-            <span>Sign up with Google</span>
-        </button>
-        
         <!-- Error Box -->
         <div id="regError" class="hidden mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm border border-red-200 flex items-center">
             <i class="fas fa-exclamation-circle mr-2"></i>
@@ -92,7 +79,7 @@
     // first time register.html has ever been opened offline, before the
     // service worker has had a chance to cache it — the whole module dies
     // silently and NOTHING on this page would work: not the form, not the
-    // Google button, not even the country-code dropdown. Dynamic import()
+    // submit handler, not even the country-code dropdown. Dynamic import()
     // keeps the page itself alive either way, and lets us show an honest
     // "you're offline" message instead of a dead, unresponsive form.
     // countries.js is small and has no external dependencies of its own,
@@ -126,7 +113,6 @@
         const btn = document.getElementById('regBtn');
         const btnText = document.getElementById('regBtnText');
         const spinner = document.getElementById('regSpinner');
-        const googleRegBtn = document.getElementById('googleRegBtn');
 
         // 3. Manual Registration
         form.addEventListener('submit', async (e) => {
@@ -159,32 +145,6 @@
             } catch (err) {
                 showError(err.message || "Couldn't create your account. Check your connection and try again.");
                 setLoading(false);
-            }
-        });
-
-        // 4. Google Registration
-        googleRegBtn.addEventListener('click', async () => {
-            hideError();
-
-            if (!navigator.onLine) {
-                showError("You're offline — signing up needs an internet connection.");
-                return;
-            }
-
-            googleRegBtn.disabled = true;
-            googleRegBtn.classList.add('opacity-50');
-
-            try {
-                // This function in auth.js handles checking if user exists,
-                // and CREATES the DB record if they don't.
-                const auth = await import('./auth.js');
-                await auth.handleGoogleAuth();
-                window.location.href = 'dashboard.html';
-            } catch (err) {
-                console.error(err);
-                showError("Google Sign-Up failed. " + (err.message || 'Please try again.'));
-                googleRegBtn.disabled = false;
-                googleRegBtn.classList.remove('opacity-50');
             }
         });
 

@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, initializeFirestore, persistentLocalCache } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA_9r8nwNiNaQvFo3nNx_JPku-b8v1fwUY", 
@@ -19,7 +18,4 @@ const db = initializeFirestore(app, {
   localCache: persistentLocalCache()
 });
 
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
-
-export { db, doc, setDoc, getDoc, updateDoc, auth, googleProvider, signInWithPopup };
+export { db, doc, setDoc, getDoc, updateDoc };

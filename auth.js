@@ -1,5 +1,5 @@
 // --- auth.js (CLEANED & FIXED) ---
-import { db, doc, setDoc, getDoc, updateDoc, auth, googleProvider, signInWithPopup } from './firebase-config.js';
+import { db, doc, setDoc, getDoc, updateDoc } from './firebase-config.js';
 import { onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -207,43 +207,6 @@ export async function syncLocalCardsToCloud() {
         };
         await updateGlobalCard(p, fullData);
     }
-}
-
-export async function handleGoogleAuth() {
-    try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
-        const username = user.email.replace(/[@.]/g, '_'); 
-        const userRef = doc(db, "users", username);
-        const userSnap = await getDoc(userRef);
-        const deviceId = getOrCreateDeviceId();
-
-        if (!userSnap.exists()) {
-            // New User: Register with this device
-            await withTimeoutStrict(() => setDoc(userRef, {
-                username: username, email: user.email, displayName: user.displayName,
-                authProvider: 'google', createdAt: new Date().toISOString(),
-                activeDevices: [deviceId], // Add first device
-                data: { projects: [], settings: {}, globalSettings: {} }
-            }));
-        } else {
-            // Existing user: record this device if it isn't already known.
-            // No cap on how many devices can be active at once — the account
-            // can be logged into from as many devices as the person wants.
-            const userData = userSnap.data();
-            let activeDevices = userData.activeDevices || [];
-
-            if (!activeDevices.includes(deviceId)) {
-                activeDevices.push(deviceId);
-                await withTimeoutStrict(() => updateDoc(userRef, { activeDevices: activeDevices }));
-            }
-        }
-
-        localStorage.setItem('paytrackUserSession', 'true');
-        localStorage.setItem('paytrackUsername', username);
-        await downloadUserData(username);
-        return true;
-    } catch (error) { throw error; }
 }
 
 export async function registerUser(username, email, phone, pin) {

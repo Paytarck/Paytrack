@@ -20,7 +20,7 @@
 // Until you have one, this script won't inject anything broken, but the
 // button will link nowhere useful — see the console warning below.
 (function () {
-    const APP_DOWNLOAD_URL = 'https://github.com/Paytarck/paytrack-app/releases/latest/download/app-debug.apk';
+    const APP_DOWNLOAD_URL = 'https://github.com/Paytarck/paytrack-app/releases/latest/download/PayTrack.apk';
 
     // If someone collapses the bigger card, don't show it again for this long
     // (the compact "Get App" pill stays on screen the whole time regardless).

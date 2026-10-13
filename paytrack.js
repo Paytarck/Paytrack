@@ -1543,6 +1543,16 @@ if (elements.receiptModal) {
     const toggleLogo = (logo) => { if (logo) logo.classList.toggle('logo-enlarged'); };
     logos.forEach(logo => { if (logo) logo.addEventListener('dblclick', () => toggleLogo(logo)); });
 // --- NEW VIEW TOGGLING LOGIC ---
+// Guarded: btnOpenTotalAmount/totalAmountInputArea/actualInstallmentForm/
+// inputTotalProjectCost/btnOpenInstallmentForm/btnSaveTotalAmount don't
+// currently exist in paytrack.html (this feature's HTML was apparently
+// never added), so this whole block used to throw unconditionally on
+// every single page load — for every project, not just installment ones —
+// silently aborting all initialization scheduled after setupEventListeners()
+// (cloud sync, auto-transactions, incoming shared receipts). Guarding it
+// stops the crash; if this feature's HTML gets added later, this code
+// starts working automatically with no further changes needed.
+if (elements.btnOpenTotalAmount) {
 
 // 1. Show Total Amount View
 elements.btnOpenTotalAmount.addEventListener('click', () => {
@@ -1593,6 +1603,9 @@ elements.btnSaveTotalAmount.addEventListener('click', (e) => {
     showNotification("Total Project Cost updated successfully!", "success");
     elements.totalAmountInputArea.classList.add('hidden');
     elements.btnOpenTotalAmount.classList.remove('border-green-600', 'bg-green-100');
+});
+
+} // end if (elements.btnOpenTotalAmount)
 
      // Trigger Project Details on Double Click
     if (elements.projectSetupSection) {
@@ -1600,14 +1613,6 @@ elements.btnSaveTotalAmount.addEventListener('click', (e) => {
         // Add a tooltip so users know they can dblclick
         elements.projectSetupSection.title = "Double-click to view Agreement/Setup details";
     }
-
-    
-    
-
-   
-
-
-});
 }
 
 // --- UTILITIES ---

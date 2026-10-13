@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="capacitor.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Login - PayTrack</title>
@@ -8,6 +9,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <script src="net-status.js"></script>
+    <script src="sw-register.js"></script>
+    <script src="app-promo.js"></script>
+    <script src="share-intent.js"></script>
 </head>
 <body class="p-4 bg-gray-900 min-h-screen flex items-center justify-center font-[Inter]">
 
@@ -47,19 +52,6 @@
             </button>
         </form>
 
-        <!-- Divider -->
-        <div class="relative flex py-5 items-center">
-            <div class="flex-grow border-t border-gray-300"></div>
-            <span class="flex-shrink-0 mx-4 text-gray-400 text-sm">Or</span>
-            <div class="flex-grow border-t border-gray-300"></div>
-        </div>
-
-        <!-- Google Login Button -->
-        <button id="googleLoginBtn" class="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 rounded-lg shadow-sm flex items-center justify-center gap-3 transition-colors">
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google">
-            <span>Sign in with Google</span>
-        </button>
-        
         <div id="loginError" class="hidden mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm border border-red-200 flex items-start">
             <i class="fas fa-times-circle mt-1 mr-2"></i>
             <span id="loginErrorText"></span>
@@ -72,90 +64,80 @@
         </div>
     </div>
 
-    <script type="module">
-    // Add clearAllDeviceSessions to the top import
-    import { loginUser, handleGoogleAuth, clearAllDeviceSessions } from './auth.js';
+    <script>
+    // auth.js (and the Firebase SDK it pulls from Google's CDN) is loaded
+    // dynamically, like every other page: a static import would silently
+    // kill this whole page if that chain fails to load while offline.
+    (function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('registered') === 'true') {
+            document.getElementById('successMsg').classList.remove('hidden');
+        }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    if(urlParams.get('registered') === 'true') {
-        document.getElementById('successMsg').classList.remove('hidden');
-    }
+        const form = document.getElementById('loginForm');
+        const errorBox = document.getElementById('loginError');
+        const btnText = document.getElementById('loginBtnText');
+        const spinner = document.getElementById('loginSpinner');
+        const btn = document.getElementById('loginBtn');
 
-    const form = document.getElementById('loginForm');
-    const googleBtn = document.getElementById('googleLoginBtn');
-    const errorBox = document.getElementById('loginError');
-    const errorText = document.getElementById('loginErrorText');
-    const btnText = document.getElementById('loginBtnText');
-    const spinner = document.getElementById('loginSpinner');
-    const btn = document.getElementById('loginBtn');
-
-    // MANUAL LOGIN
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        // Reset UI
-        errorBox.classList.add('hidden');
-        btnText.classList.add('hidden');
-        spinner.classList.remove('hidden');
-        btn.disabled = true;
-
-        const username = document.getElementById('loginUsername').value.trim();
-        const pin = document.getElementById('loginPin').value;
-
-        try {
-            if(!username || pin.length !== 4) throw new Error("Check username and PIN.");
-            
-            await loginUser(username, pin);
-            window.location.href = 'dashboard.html';
-
-        } catch (err) {
-            // Clear the error box completely before adding new text/buttons
-            errorBox.innerHTML = `<i class="fas fa-times-circle mt-1 mr-2"></i> <span id="loginErrorText">${err.message}</span>`;
+        function showError(message) {
+            errorBox.innerHTML = '<i class="fas fa-times-circle mt-1 mr-2"></i> <span id="loginErrorText"></span>';
+            document.getElementById('loginErrorText').textContent = message;
             errorBox.classList.remove('hidden');
-            
-            // Limit Check Logic
-            if (err.message.includes("Limit Reached") || err.message.includes("2 devices")) {
-                const resetBtn = document.createElement('button');
-                resetBtn.type = "button"; // Important: stop it from submitting the form
-                resetBtn.innerHTML = "Clear Other Devices & Login";
-                resetBtn.className = "mt-2 w-full text-[10px] font-bold text-red-700 underline uppercase block text-left";
-                
-                resetBtn.onclick = async () => {
-                    try {
-                        resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resetting...';
-                        await clearAllDeviceSessions(username);
-                        alert("Sessions Reset! You can now login.");
-                        location.reload(); 
-                    } catch (resetErr) {
-                        alert("Reset failed. Check internet.");
-                        resetBtn.innerHTML = "Clear Other Devices & Login";
-                    }
-                };
-                errorBox.appendChild(resetBtn);
+        }
+
+        // LOGIN
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Reset UI
+            errorBox.classList.add('hidden');
+            btnText.classList.add('hidden');
+            spinner.classList.remove('hidden');
+            btn.disabled = true;
+
+            const username = document.getElementById('loginUsername').value.trim();
+            const pin = document.getElementById('loginPin').value;
+
+            try {
+                if (!username || pin.length !== 4) throw new Error("Check username and PIN.");
+                if (!navigator.onLine) throw new Error("You're offline - logging in needs an internet connection. Use \"Continue Offline\" below to keep using the app on this device.");
+
+                const auth = await import('./auth.js');
+                await auth.loginUser(username, pin);
+                window.location.href = 'dashboard.html';
+
+            } catch (err) {
+                showError(err.message || "Couldn't log in. Check your connection and try again.");
+
+                // Limit Check Logic
+                if (err.message && (err.message.includes("Limit Reached") || err.message.includes("2 devices"))) {
+                    const resetBtn = document.createElement('button');
+                    resetBtn.type = "button"; // Important: stop it from submitting the form
+                    resetBtn.innerHTML = "Clear Other Devices & Login";
+                    resetBtn.className = "mt-2 w-full text-[10px] font-bold text-red-700 underline uppercase block text-left";
+
+                    resetBtn.onclick = async () => {
+                        try {
+                            resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resetting...';
+                            const auth = await import('./auth.js');
+                            await auth.clearAllDeviceSessions(username);
+                            alert("Sessions Reset! You can now login.");
+                            location.reload();
+                        } catch (resetErr) {
+                            alert("Reset failed. Check internet.");
+                            resetBtn.innerHTML = "Clear Other Devices & Login";
+                        }
+                    };
+                    errorBox.appendChild(resetBtn);
+                }
+
+                btnText.classList.remove('hidden');
+                spinner.classList.add('hidden');
+                btn.disabled = false;
             }
-
-            btnText.classList.remove('hidden');
-            spinner.classList.add('hidden');
-            btn.disabled = false;
-        }
-    });
-
-    // GOOGLE LOGIN
-    googleBtn.addEventListener('click', async () => {
-        errorBox.classList.add('hidden');
-        googleBtn.disabled = true;
-        googleBtn.classList.add('opacity-50');
-
-        try {
-            await handleGoogleAuth();
-            window.location.href = 'dashboard.html';
-        } catch (err) {
-            errorBox.innerHTML = `<i class="fas fa-times-circle mt-1 mr-2"></i> <span>${err.message}</span>`;
-            errorBox.classList.remove('hidden');
-            googleBtn.disabled = false;
-            googleBtn.classList.remove('opacity-50');
-        }
-    });
-</script>
+        });
+    })();
+    </script>
 </body>
 </html>
